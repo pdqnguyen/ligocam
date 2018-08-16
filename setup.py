@@ -39,6 +39,6 @@ setup(
 		'bin/ligocam-setup'
 	],
 	data_files=[
-		('{}/.local/share/ligocam/'.format(os.environ['HOME']),['etc/*'])
+		('{}/.local/share/ligocam/'.format(os.environ['HOME']),['etc/calendartemp.html'])
 	]
 )
