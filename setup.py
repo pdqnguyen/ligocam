@@ -22,6 +22,12 @@
 from setuptools import setup, find_packages
 import os
 
+data_files = []
+for root, dirnames, filenames in os.walk('etc'):
+    for filename in filenames:
+        path = os.path.join(root, filename)
+        data_files.append((root, path))
+print data_files
 setup(
 	name='ligocam',
 	version='0.0',
@@ -37,8 +43,5 @@ setup(
 		'bin/ligocam-batch',
 		'bin/ligocam-post',
 		'bin/ligocam-setup'
-	],
-	data_files=[
-		('{}/.local/share/ligocam/'.format(os.environ['HOME']),['etc/calendartemp.html'])
 	]
 )
