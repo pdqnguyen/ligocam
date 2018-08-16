@@ -135,11 +135,11 @@ def create_html_row(results, asd_url, ts_url, info_url=None,
     chan = results[0]
     blrms = [float(x) for x in results[1:12]]
     excess = results[12]
-    comb = results[13]
-    disconnect = results[14]
+    daqfail = results[13]
+    disconn = results[14]
     status = results[15]
-    disconhour = results[16]
-    daqfailhour = results[17]
+    disconn_hour = results[16]
+    daqfail_hour = results[17]
     
     thd1g = blrms_thresholds['GREATER_1']
     thd1l = blrms_thresholds['LESS_1']
@@ -162,16 +162,16 @@ def create_html_row(results, asd_url, ts_url, info_url=None,
         cells['excess'] = htmllib.TableCell(excess, bgcolor='FFD280', width='4%')
     else:
         cells['excess'] = htmllib.TableCell(excess, bgcolor='white', width='4%')
-    if comb == 'Yes':
-        cells['comb'] = htmllib.TableCell(comb + '     (' + daqfailhour + ' h)', \
-                                            bgcolor='FF9771', width='4%')
+    if daqfail == 'Yes':
+        cells['daqfail'] = htmllib.TableCell('%s (%s h)' % (daqfail, daqfail_hour), \
+                                          bgcolor='FF9771', width='4%')
     else:
-        cells['comb'] = htmllib.TableCell(comb, bgcolor='white', width='4%')
-    if disconnect == 'Yes':
-        cells['disconnect'] = htmllib.TableCell(disconnect + '     (' + disconhour + \
-                                        ' h)', bgcolor='FF6633', width='6%')
+        cells['daqfail'] = htmllib.TableCell(daqfail, bgcolor='white', width='4%')
+    if disconn == 'Yes':
+        cells['disconn'] = htmllib.TableCell('%s (%s h)' % (disconn, disconn_hour), \
+                                                bgcolor='FF6633', width='6%')
     else:
-        cells['disconnect'] = htmllib.TableCell(disconnect, bgcolor='white', width='6%')
+        cells['disconn'] = htmllib.TableCell(disconn, bgcolor='white', width='6%')
     if status == 'Alert':
         cells['status'] = htmllib.TableCell(status, bgcolor='FFFF00', width='4%')
     else:
@@ -202,12 +202,12 @@ def create_html_row(results, asd_url, ts_url, info_url=None,
             else:
                 blrms_cells.append(htmllib.TableCell(x, bgcolor='white', width='4%'))
     
-    # Combine cells to form a table row
+    # daqfailine cells to form a table row
     if info_url is not None:
         row = [cells['chan'], cells['info'], cells['image'], cells['status'],
-               cells['disconnect'], cells['comb'], cells['excess']] + blrms_cells
+               cells['disconn'], cells['daqfail'], cells['excess']] + blrms_cells
     else:
-        row = [cells['chan'], cells['status'], cells['disconnect'], cells['comb'],
+        row = [cells['chan'], cells['status'], cells['disconn'], cells['daqfail'],
                cells['excess']] + blrms_cells + [cells['image']]
     return row
 
