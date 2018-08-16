@@ -26,36 +26,34 @@ def timeseries_plot(channel, filename, data, duration, current_utc):
     """
     
     sample_rate = len(data) // duration
+    time = np.linspace(0, duration, len(data))
     fig = plt.figure(figsize=(10,8))
     plt.suptitle('Epoch: ' + current_utc + '\nChannel: ' + channel, fontsize=14)
     
     # 500 second time series plot
     plt.subplot(311)
-    for i in range(0, 400*sample_rate + 1, 50*sample_rate):
-        rng = range(i, i + 50*sample_rate)
-        plt.plot(rng, data[rng], 'green')
-    rng = range(450*sample_rate, len(data))
-    plt.plot(rng, data[rng], 'green')
-    plt.xlim([0, len(data)])
+    t_ranges = []
+    t_step = 1 + len(data) // 1e5
+    plt.plot(time[::t_step], data[::t_step], 'green')
+    plt.xlim([0, duration])
     plt.grid(True)
-    xticks_pos = range(0, duration*sample_rate, 100*sample_rate)
-    xticks_labels = [str(x // sample_rate) for x in xticks_pos]
-    plt.xticks(xticks_pos, xticks_labels)
+    plt.xticks(range(0, duration, 100))
     
     # 1 second time series plot (start)
     plt.subplot(312)
-    plt.plot(data[range(0, sample_rate)], 'green')
-    plt.xlim([0, sample_rate+50])
+    rng = range(0, sample_rate+1)
+    plt.plot(time[rng], data[rng], 'green')
     plt.grid(True)
-    plt.xticks([0, (sample_rate-1)/2, sample_rate-1], ['0', '0.5', '1'])
+    plt.xlim([0, 1])
+    plt.xticks([0, 0.5, 1])
     plt.ylabel('Amplitude [counts]', fontsize=14)
     
     # 1 second time series plot (end)
     plt.subplot(313)
-    plt.plot(data[range(511*sample_rate-1, duration*sample_rate)], 'green')
-    plt.xlim([-50, sample_rate])
-    plt.xticks([0, (sample_rate-1)/2, sample_rate-1],
-               ['%s' % (duration-1), '%.1f' % (duration-0.5), '%s' % duration])
+    rng = range(len(data) - 1*sample_rate - 1, len(data))
+    plt.plot(time[rng], data[rng], 'green')
+    plt.xlim([duration-1, duration])
+    plt.xticks([duration - 1, duration - 0.5, duration])
     plt.xlabel('Time [s]', fontsize=14)
     plt.grid(True)
     
@@ -126,8 +124,6 @@ def asd_plot(channel, filename, freq_segs, freq_binned_segs, asd_segs,
     if num_binned_segs > 4:
         upper_idx = min([8, num_binned_segs])
         for i in range(4, upper_idx):
-            # x = freq_segs[i]; y = asd_segs[i]
-            # plt.loglog(x[y>0], y[y>0], 'LightBlue')
             plt.loglog(freq_segs[i], asd_segs[i], 'LightBlue')
         plt.loglog(
             np.concatenate(freq_binned_segs[4:upper_idx]),
@@ -141,7 +137,7 @@ def asd_plot(channel, filename, freq_segs, freq_binned_segs, asd_segs,
         plt.loglog(1, 1, 'w', 1, 1, 'w')
     plt.xlim([3, 300])
     plt.xticks([3, 10, 30, 100, 300], ['3', '10', '30', '100', '300'])
-    plt.ylabel('Amplitude [counts/Hz$^{1/2}$]', fontsize=14)
+    plt.ylabel('Amplitude [counts/sqrt(Hz)]', fontsize=14)
     plt.grid(True)
     
     # 300 TO 10K HZ ASD
