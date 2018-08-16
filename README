@@ -18,9 +18,9 @@ the git repository:
 
 Install ligocam directly from this repository via
 
-python -m pip install git+https://github.com/gwdetchar/gwdetchar.git
+   python -m pip install git+https://github.com/gwdetchar/gwdetchar.git
 
 For first-time setup, edit the configuration file for the desired ifo/subsystem
 to your liking and run ligocam-setup, e.g.:
 
-ligocam-setup <config file> <share directory>
+   ligocam-setup <config file> <share directory>
