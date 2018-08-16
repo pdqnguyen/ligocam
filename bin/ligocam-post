@@ -58,7 +58,6 @@ config.read(config_file)
 ifo = config.get('Run', 'ifo')
 subsystem = config.get('Run', 'subsystem')
 email_to = config.get('Email', 'To')
-email_from = config.get('Email', 'From')
 email_replyto = config.get('Email', 'Reply-to')
 run_dir = config.get('Paths', 'run_dir')
 out_dir = config.get('Paths', 'out_dir')
@@ -156,7 +155,7 @@ disconn_channels = lcalert.find_bad_channels(disconn_now, search_for=EMAIL_DISCO
 daqfail_channels = lcalert.find_bad_channels(daqfail_now, search_for=EMAIL_DAQFAIL)
 if len(disconn_channels) > 0 or len(daqfail_channels) > 0:
     results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_' + str(current_time) + '.html')
-    message = lcalert.write_email(email_to, email_from, email_replyto, disconn_channels, daqfail_channels,
+    message = lcalert.write_email(email_to, email_replyto, disconn_channels, daqfail_channels,
                                   ifo, subsystem, results_url, current_time_utc)
     message_file = os.path.join(job_dir, 'email.txt')
     with open(message_file, 'w') as f:
