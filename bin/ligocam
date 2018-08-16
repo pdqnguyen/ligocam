@@ -1,0 +1,221 @@
+#!/usr/bin/env python
+# Copyright (C) 2013 Dipongkar Talukder
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+LIGO Channel Activity Monitor (LigoCAM) analyzes power spectra of auxiliary
+channels and flags those that show signs of DAQ failure, disconnection, or
+significant band-limited RMS changes. This script is the primary executable
+run by ligocam-batch for each channel list. It performs the analysis and
+exports the data to be post-processed by ligocam-post.
+"""
+
+from __future__ import division
+import matplotlib.mlab as mlab
+import numpy as np
+import os
+import sys
+import time
+import traceback
+from argparse import ArgumentParser
+from ConfigParser import ConfigParser
+from ligocam import refutils as lcrefutils
+from ligocam import analysis as lcanalysis
+from ligocam import plot as lcplot
+from ligocam import (DAQFAIL_DEFAULT_NAME, DISCONN_DEFAULT_NAME,
+                     DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
+import shutil
+from glue import lal
+from pylal import frutils
+from gwpy.time import from_gps, tconvert
+
+__author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
+
+#============================================================================
+
+timestamp = tconvert()
+print "start time", str(timestamp), '(%s)' % str(tconvert(timestamp))
+
+# Argument parsing
+argparser = ArgumentParser()
+argparser.add_argument('-c', '--config_file', help="LigoCAM configuration file.")
+argparser.add_argument('-t', '--current_time', type=int, help="Current GPS time.")
+argparser.add_argument('channel_list', help="Channel list.")
+args = argparser.parse_args()
+config_file = args.config_file
+current_time = args.current_time
+channel_list = args.channel_list
+
+current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
+year_month_str = from_gps(current_time).strftime('%Y_%m')
+
+# Config parsing
+config = ConfigParser()
+config.read(config_file)
+frame_type = config.get('Run', 'frame_type')
+lookback_time = int(config.get('Run', 'lookback_time'))
+duration = int(config.get('Run', 'duration'))
+run_dir = config.get('Paths', 'run_dir')
+out_dir = config.get('Paths', 'out_dir')
+thresholds_config = config.get('Paths', 'thresholds')
+
+# Directories
+hist_dir = os.path.join(run_dir, 'history')
+job_dir = os.path.join(run_dir, 'jobs', str(current_time))
+cache_dir = os.path.join(job_dir, 'cache')
+results_dir = os.path.join(job_dir, 'results')
+asd_dir = os.path.join(out_dir, 'images', 'ASD', year_month_str, str(current_time))
+ts_dir = os.path.join(out_dir, 'images', 'TS', year_month_str, str(current_time))
+
+for d in [hist_dir, cache_dir, results_dir, asd_dir, ts_dir]:
+    if not os.path.exists(d):
+        os.makedirs(d)
+
+# Threshold dictionaries
+thresholds = ConfigParser()
+thresholds.read(thresholds_config)
+blrms_thresholds = {key: float(value) for key, value in thresholds.items('BLRMS')}
+daqfail_thresholds = {key: float(value) for key, value in thresholds.items('DAQFailure')}
+disconn_thresholds = {key: float(value) for key, value in thresholds.items('Disconnection')}
+disconn_thresholds['weak_mag_chans'] = [value for key, value in thresholds.items('Weak Magnetometers')]
+
+# Get channel list
+with open(channel_list, 'r') as f:
+    channels = f.readlines()
+channels = [c.rstrip() for c in channels]
+
+# Get frame cache for current data
+with open(os.path.join(cache_dir, 'current.txt'), 'r') as current_cache:
+    cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in current_cache.readlines()]
+get_data = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
+
+for channel in channels:
+    channel_name = channel.rstrip()
+    print '\nChannel:', channel_name
+    channel_filename = channel_name.replace(':', '_')
+    
+    #### LOAD DATA ####
+    
+    t_fetch = time.time()
+    try:
+        data = get_data.fetch(channel_name, current_time, current_time + duration)
+    except:
+        print traceback.print_exc()
+        continue
+    sample_rate = len(data) / duration
+    overlap = 0
+    psd, freq = mlab.psd(data, NFFT=len(data), Fs=int(sample_rate), \
+                         noverlap=int(overlap*sample_rate), detrend=mlab.detrend_none, \
+                         window=mlab.window_hanning, pad_to=None, sides='default', \
+                         scale_by_freq=1)
+    psd = psd.reshape(freq.shape)
+    print "PSD length", len(psd)
+    ref_file = os.path.join(hist_dir, channel_filename + '.txt')
+    if os.path.exists(ref_file):
+        psd_ref = np.loadtxt(ref_file, delimiter=',')
+    else:
+        # Compute exponentially-averaged reference PSD
+        try:
+            psd_ref = lcrefutils.compute_refpsd(channel_name, cache_dir, frame_type, current_time, duration, overlap)
+        except:
+            print traceback.print_exc()
+            continue
+    dt_fetch = time.time() - t_fetch
+    print "fetch time", dt_fetch
+    
+    # Create alert lists if not existent
+    disconn_default = os.path.join(run_dir, DISCONN_DEFAULT_NAME)
+    disconn_past = os.path.join(hist_dir, DISCONN_PAST_NAME)
+    if not os.path.exists(disconn_past):
+        if not os.path.exists(disconn_default):
+            os.mknod(disconn_default)
+        shutil.copy2(disconn_default, disconn_past)
+    daqfail_default = os.path.join(run_dir, DAQFAIL_DEFAULT_NAME)
+    daqfail_past = os.path.join(hist_dir, DAQFAIL_PAST_NAME)
+    if not os.path.exists(daqfail_past):
+        if not os.path.exists(daqfail_default):
+            os.mknod(daqfail_default)
+        shutil.copy2(daqfail_default, daqfail_past)
+    
+    #### ANALYSIS ####
+    
+    t_analysis = time.time()
+    # Prepare binned data
+    data_segs = lcanalysis.prep_data(freq, psd, psd_ref, duration)
+    freq_segs = data_segs['freq']
+    psd_segs = data_segs['psd']
+    freq_binned_segs = data_segs['freq_binned']
+    psd_binned_segs = data_segs['psd_binned']
+    psd_ref_binned_segs = data_segs['psd_ref_binned']
+    # Check for disconnection or DAQ failure
+    status_dict = lcanalysis.check_status(channel, psd, psd_ref, disconn_past, daqfail_past, duration, \
+                                          daqfail_thresholds, disconn_thresholds)
+    # Check for large BLRMS changes
+    blrms_dict = lcanalysis.check_blrms(channel, psd_binned_segs, psd_ref_binned_segs, blrms_thresholds)
+    # Combine results
+    results = dict(status_dict.items() + blrms_dict.items())
+    
+    # Save current PSD to reference if status is ok
+    if results['daqfail'] or results['disconn']:
+        results['status'] = 'Alert'
+    else:
+        results['status'] = 'Ok'
+        psd_ref_new = np.concatenate(psd_binned_segs, axis=0)
+        filename = os.path.join(hist_dir, channel.replace(':', '_') + '.txt')
+        lcrefutils.save_new_ref(psd_ref, psd_ref_new, filename)
+        
+    dt_analysis = time.time() - t_analysis
+    print "analysis time", dt_analysis
+    
+    #### OUTPUT DATA ####
+    
+    # Parse results
+    line = [channel_name] + ['%.3g' % x for x in results['blrms_changes']]
+    for key in ['excess', 'daqfail', 'disconn']:
+        if results[key]:
+            line.append('Yes')
+        else:
+            line.append('No')
+    line.append(results['status'])
+    line.append('%.2g' % results['disconn_hour'])
+    line.append('%.2g' % results['daqfail_hour'])
+    
+    # Save results
+    results_filename = os.path.join(results_dir, 'result_' + channel_filename + '.txt')
+    with open(results_filename,'w') as results_file:
+        results_file.write(','.join(line) + '\n')
+    
+    # Report disconnected channels and DAQ failures
+    disconn_new = os.path.join(results_dir, 'disconn_' + channel_filename)
+    daqfail_new = os.path.join(results_dir, 'daqfail_' + channel_filename)
+    with open(disconn_new, 'w') as disconn_file:
+        disconn_file.write("%s  %.2g\n" % (channel_name, results['disconn_hour']))
+    with open(daqfail_new, 'w') as daqfail_file:
+        daqfail_file.write("%s  %.2g\n" % (channel_name, results['daqfail_hour']))
+    
+    # Plot spectra and time series
+    asd_segs = [np.sqrt(seg) for seg in psd_segs]
+    asd_binned_segs = [np.sqrt(seg) for seg in psd_binned_segs]
+    asd_ref_binned_segs = [np.sqrt(seg) for seg in psd_ref_binned_segs]
+    ts_file = os.path.join(ts_dir, channel.replace(':', '_') + '.png')
+    asd_file = os.path.join(asd_dir, channel.replace(':', '_') + '.png')
+    lcplot.timeseries_plot(channel, ts_file, data, duration, current_time_utc)
+    lcplot.asd_plot(channel, asd_file, freq_segs, freq_binned_segs, asd_segs,
+                    asd_binned_segs, asd_ref_binned_segs, current_time_utc)
+
+end_time = tconvert()
+print "total time", str(end_time - timestamp)
+print str(end_time)
+print str(tconvert(end_time))

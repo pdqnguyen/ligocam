@@ -1,0 +1,8 @@
+#! /bin/bash
+source $HOME/.bash_profile
+ligocam-batch $HOME/ligocam/config/LHO_PEM.ini
+ligocam-batch $HOME/ligocam/config/LHO_ISI.ini
+ligocam-batch $HOME/ligocam/config/LHO_SUS.ini
+ligocam-batch $HOME/ligocam/config/LLO_PEM.ini
+ligocam-batch $HOME/ligocam/config/LLO_ISI.ini
+ligocam-batch $HOME/ligocam/config/LLO_SUS.ini

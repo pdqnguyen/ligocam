@@ -1,0 +1,43 @@
+#! /usr/bin/python
+
+import os
+from argparse import ArgumentParser
+from ConfigParser import ConfigParser
+
+DAQFAIL_PAST_NAME = 'daqfail_past.txt'
+DISCONN_PAST_NAME = 'disconn_past.txt'
+
+def reset_history(filename, channel):
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+    for i, line in enumerate(lines):
+        if channel in line:
+            lines[i] = channel + ' 0\n'
+    with open(filename, 'w') as f:
+        f.writelines(lines)
+    return
+
+# Parse arguments
+argparser = ArgumentParser()
+argparser.add_argument('config_file', help="Configuration file for run")
+argparser.add_argument('channel', help="Channel to reset")
+args = argparser.parse_args()
+config_file = args.config_file
+channel = args.channel
+
+# Parse config
+config = ConfigParser()
+config.read(args.config_file)
+run_dir = config.get('Paths', 'run_dir')
+hist_dir = os.path.join(run_dir, 'history')
+daqfail_file = os.path.join(hist_dir, DAQFAIL_PAST_NAME)
+disconn_file = os.path.join(hist_dir, DISCONN_PAST_NAME)
+channel_file = os.path.join(hist_dir, channel.replace(':', '_') + '.txt')
+
+# Reset history and remove channel history
+reset_history(daqfail_file, channel)
+reset_history(disconn_file, channel)
+try:
+    os.remove(channel_file)
+except OSError:
+    print "Channel %s has no reference PSD to delete."

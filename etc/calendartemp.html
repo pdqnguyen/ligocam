@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="css/style.css">
+        <title>Month Year</title>
+                <script src="js/jquery-latest.js"></script>
+
+           <script type="text/javascript">
+            function initMenu() {
+                var block = $(".day");
+                    block.addClass("clickable");
+                    block.hover(function(){window.status = $(this)}, function(){window.status = ""});
+                
+                $('.open').hide();
+                block.click(
+                    function() {
+                        $(this).parents('div:eq(0)').find('.open').slideToggle('fast');
+                    }
+                );}
+            $(document).ready(function() {initMenu();});
+           </script>
+    </head>
+    
+    <body>
+        <div id="calendar">
+            <div id="calcontainer">
+                <div id="calheader">
+                    <h2>Month Year</h2>
+                </div>
+                <div id="daysweek">
+                    <div class="dayweek"><p>Sunday</p></div>
+                    <div class="dayweek"><p>Monday</p></div>
+                    <div class="dayweek"><p>Tuesday</p></div>
+                    <div class="dayweek"><p>Wednesday</p></div>
+                    <div class="dayweek"><p>Thursday</p></div>
+                    <div class="dayweek"><p>Friday</p></div>
+                    <div class="dayweek brn"><p>Saturday</p></div>
+                </div>
+                <div id="daysmonth">
+                
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,164 @@
+#!/usr/bin/env python
+# Copyright (C) 2013 Dipongkar Talukder
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+LIGO Channel Activity Monitor (LigoCAM) analyzes power spectra of auxiliary
+channels and flags those that show signs of DAQ failure, disconnection, or
+significant band-limited RMS changes. This script performs post-processing of
+ligocam results, moving the data to public HTML pages and creating calendars
+and tables for viewing.
+"""
+
+import os
+import re
+import shutil
+from gwpy.time import from_gps
+from argparse import ArgumentParser
+from ConfigParser import ConfigParser
+from ligocam import utils as lcutils
+from ligocam import html as lchtml
+from ligocam import alert as lcalert
+from ligocam import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
+
+__author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
+# Send alert emails for these hours
+EMAIL_DISCONN = 12
+EMAIL_DAQFAIL = 12
+
+#================================================
+
+# Argument parsing
+argparser = ArgumentParser()
+argparser.add_argument('-c', '--config_file', help="LigoCAM configuration file.")
+argparser.add_argument('-t', '--current_time', type=int, help="Current GPS time.")
+argparser.add_argument('channel_list', help="Channel list.")
+args = argparser.parse_args()
+config_file = args.config_file
+current_time = args.current_time
+channel_list = args.channel_list
+current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
+year_month_str = from_gps(current_time).strftime('%Y_%m')
+
+# Config parsing
+config = ConfigParser()
+config.read(config_file)
+ifo = config.get('Run', 'ifo')
+subsystem = config.get('Run', 'subsystem')
+email_to = config.get('Email', 'To')
+email_from = config.get('Email', 'From')
+email_replyto = config.get('Email', 'Reply-to')
+run_dir = config.get('Paths', 'run_dir')
+out_dir = config.get('Paths', 'out_dir')
+pub_url = config.get('Paths', 'public_url')
+thresholds_config_file = config.get('Paths', 'thresholds')
+
+# History and job directories
+hist_dir = os.path.join(run_dir, 'history')
+job_dir = os.path.join(run_dir, 'jobs', str(current_time))
+# Output directories
+temp_results_dir = os.path.join(job_dir, 'results')
+results_dir = os.path.join(out_dir, 'results')
+results_archive_dir = os.path.join(results_dir, 'old', year_month_str)
+
+# Combine results files
+results_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
+                 if re.match('result_', x)]
+results_now = os.path.join(results_dir, 'results_now.txt')
+lcutils.combine_files(results_files, results_now)
+thresholds_config = ConfigParser()
+thresholds_config.read(thresholds_config_file)
+weak_channels = [value for key, value in thresholds_config.items('Weak Magnetometers')]
+lcutils.fix_weak_magnetometers(results_now, weak_channels)
+
+results_archive = os.path.join(results_archive_dir, 'results_%s.txt' % current_time)
+shutil.copy2(results_now, results_archive)
+
+# Combine DAQ failure and disconnection files for archiving
+disconn_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
+                 if re.match('disconn_', x)]
+disconn_now = os.path.join(results_dir, 'disconn_now.txt')
+lcutils.combine_files(disconn_files, disconn_now)
+daqfail_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
+                 if re.match('daqfail_', x)]
+daqfail_now = os.path.join(results_dir, 'daqfail_now.txt')
+lcutils.combine_files(daqfail_files, daqfail_now)
+
+# Archive DAQ failure and disconnection files
+disconn_stat = os.stat(disconn_now)
+disconn_size = disconn_stat.st_size
+if disconn_size > 2:
+    shutil.copy2(disconn_now, os.path.join(hist_dir, DISCONN_PAST_NAME))
+daqfail_stat = os.stat(daqfail_now)
+daqfail_size = daqfail_stat.st_size
+if daqfail_size > 2:
+    shutil.copy2(daqfail_now, os.path.join(hist_dir, DAQFAIL_PAST_NAME))
+
+# Sort data by alert status and BLRMS condition
+lcutils.filter_results(results_now)
+
+# Setup HTML directories
+page_dir = os.path.join(out_dir, 'pages', year_month_str)
+status_dir = os.path.join(out_dir, 'status')
+if not os.path.exists(page_dir):
+    os.makedirs(page_dir)
+if not os.path.exists(status_dir):
+    os.makedirs(status_dir)
+if not os.path.exists(os.path.join(page_dir, 'css')):
+    shutil.copytree(os.path.join(out_dir, 'css'), os.path.join(page_dir, 'css'))
+if not os.path.exists(os.path.join(page_dir, 'js')):
+    shutil.copytree(os.path.join(out_dir, 'js'), os.path.join(page_dir, 'js'))
+
+# HTML PAGES
+html_page = os.path.join(page_dir, 'LigoCamHTML_%s.html' % current_time)
+asd_path = os.path.join(pub_url, 'images', 'ASD', year_month_str, str(current_time))
+ts_path = os.path.join(pub_url, 'images', 'TS', year_month_str, str(current_time))
+# Create HTML page
+lchtml.create_html(html_page, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path)
+# Create single HTMLs
+lchtml.create_single_htmls(status_dir, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path)
+
+# Copy to current HTML for "latest page" view
+filestat = os.stat(html_page)
+file_size = filestat.st_size
+if file_size > 2000:
+    html_current = os.path.join(out_dir, 'LigoCamHTML_current.html')
+    shutil.copy2(html_page, html_current)
+# Create empty HTML page for missing channels
+with open(channel_list, 'r') as f:
+    all_channels = [line.rstrip() for line in f.readlines()]
+with open(results_now, 'r') as f:
+    results_channels = [line.split(',')[0] for line in f.readlines()]
+for chan in all_channels:
+    if chan not in results_channels:
+        status_file = os.path.join(status_dir, '%s_status.html' % chan.replace(':', '_'))
+        lchtml.create_empty_html(status_file, results_now, chan)
+
+# Edit this month's calendar
+calendar_file = os.path.join(out_dir, 'calendar', 'LigoCAM_%s.html' % year_month_str)
+results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_%s.html' % current_time)
+lcutils.edit_calendar(calendar_file, results_url, current_time)
+
+# Send email alert if there are any bad channels
+disconn_channels = lcalert.find_bad_channels(disconn_now, search_for=EMAIL_DISCONN)
+daqfail_channels = lcalert.find_bad_channels(daqfail_now, search_for=EMAIL_DAQFAIL)
+if len(disconn_channels) > 0 or len(daqfail_channels) > 0:
+    results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_' + str(current_time) + '.html')
+    message = lcalert.write_email(email_to, email_from, email_replyto, disconn_channels, daqfail_channels,
+                                  ifo, subsystem, results_url, current_time_utc)
+    message_file = os.path.join(job_dir, 'email.txt')
+    with open(message_file, 'w') as f:
+        f.write(message)
+    lcalert.send_email(message_file)

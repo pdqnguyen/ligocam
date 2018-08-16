@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+# Copyright (C) 2013 Dipongkar Talukder
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+LIGO Channel Activity Monitor (LigoCAM) analyzes power spectra of auxiliary
+channels and flags those that show signs of DAQ failure, disconnection, or
+significant band-limited RMS changes. This script submits a batch of LigoCAM
+jobs and organizes the output for html viewing.
+"""
+
+import numpy as np
+import os
+import subprocess
+import sys
+from ConfigParser import ConfigParser
+from argparse import ArgumentParser
+from glue import pipeline
+from glue.datafind import GWDataFindHTTPConnection
+from pylal import frutils
+from gwpy.time import tconvert, from_gps, to_gps
+
+__author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
+
+TAG = 'ligocam-batch'
+UNIVERSE = 'vanilla'
+REQUEST_MEMORY = 4096
+RETRY = 0
+PATH_TO_LIGOCAM = '/home/philippe.nguyen/ligocam/ligocam.py'
+PATH_TO_POSTPROCESSING = '/home/philippe.nguyen/ligocam/ligocam-post.py'
+
+#========================================================================
+
+# Argument parsing
+argparser = ArgumentParser()
+argparser.add_argument('config_file', help="LigoCAM configuration file.")
+args = argparser.parse_args()
+config_file = args.config_file
+
+# Config parsing
+config = ConfigParser()
+config.read(config_file)
+ifo = config.get('Run', 'ifo')
+frame_type = config.get('Run', 'frame_type')
+channels_per_job = int(config.get('Run', 'channels_per_job'))
+lookback_time = int(config.get('Run', 'lookback_time'))
+duration = int(config.get('Run', 'duration'))
+condor_accounting_group = config.get('Condor', 'condor_accounting_group')
+condor_accounting_group_user = config.get('Condor', 'condor_accounting_group_user')
+run_dir = config.get('Paths', 'run_dir')
+out_dir = config.get('Paths', 'out_dir')
+channel_list = config.get('Paths', 'channel_list')
+
+# Times
+time_now = tconvert()
+current_time = time_now - lookback_time
+current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
+reference_times = [current_time - 3600 * i for i in range(1, 13)]
+reference_times_utc = [from_gps(t).strftime('%h %d %Y %H:%M:%S UTC') for t in reference_times]
+year_month_str = from_gps(current_time).strftime('%Y_%m')
+
+# History directory
+hist_dir = os.path.join(run_dir, 'history')
+# Directory for current job
+job_dir = os.path.join(run_dir, 'jobs', str(current_time))
+# Subdirectories for current job
+log_dir = os.path.join(job_dir, 'logs')
+sub_dir = os.path.join(job_dir, 'condor')
+cache_dir = os.path.join(job_dir, 'cache')
+chan_dir = os.path.join(job_dir, 'channels')
+# Output directories
+temp_results_dir = os.path.join(job_dir, 'results')
+results_dir = os.path.join(out_dir, 'results')
+old_results_dir = os.path.join(results_dir, 'old', year_month_str)
+asd_dir = os.path.join(out_dir, 'images', 'ASD', year_month_str, str(current_time))
+ts_dir = os.path.join(out_dir, 'images', 'TS', year_month_str, str(current_time))
+pages_dir = os.path.join(out_dir, 'pages', year_month_str)
+
+# Create directories
+all_dirs = [hist_dir, job_dir, log_dir, sub_dir, cache_dir, chan_dir, temp_results_dir,
+            results_dir, old_results_dir, asd_dir, ts_dir, pages_dir]
+for d in all_dirs:
+    if not os.path.exists(d):
+        os.makedirs(d)
+
+# Get frame caches
+conn = GWDataFindHTTPConnection()
+if ifo == 'LHO':
+    observatory = 'H'
+elif ifo == 'LLO':
+    observatory = 'L'
+current_cache = conn.find_frame_urls(observatory, frame_type, current_time, current_time + duration, urltype='file')
+reference_caches = []
+for ref_time in reference_times:
+    reference_caches.append(
+        conn.find_frame_urls(observatory, frame_type, ref_time, ref_time + duration, urltype='file')
+    )
+conn.close()
+
+# Save caches to text files
+current_cache_file = os.path.join(cache_dir, 'current.txt')
+with open(current_cache_file, 'w') as file:
+    current_cache.tofile(file)
+for i, ref_cache in enumerate(reference_caches):
+    ref_cache_file = os.path.join(cache_dir, 'reference-%02d.txt' % i)
+    with open(ref_cache_file, 'w') as file:
+        ref_cache.tofile(file)
+
+# Split channel list
+with open(channel_list, 'r') as file:
+    channels = file.readlines()
+channels = [c.replace('\n', '') for c in channels]
+channel_list_split = []
+for i in range(0, len(channels), channels_per_job):
+    split = channels[i : i + channels_per_job]
+    filename = os.path.join(chan_dir, 'channels-%02d.txt' % (i/channels_per_job))
+    with open(filename, 'w') as file:
+        file.write('\n'.join(split))
+    channel_list_split.append(filename)
+
+# Initialize pipeline
+dag = pipeline.CondorDAG(os.path.join(log_dir, '%s.log' % TAG))
+dag.set_dag_file(os.path.join(sub_dir, TAG))
+dagfile = dag.get_dag_file()
+
+# Configure ligocam job
+sub_filename = '%s.sub' % os.path.splitext(dagfile)[0]
+post_sub_filename = sub_filename.replace('batch', 'post')
+job = pipeline.CondorDAGJob(UNIVERSE, PATH_TO_LIGOCAM)
+job.set_sub_file(sub_filename)
+logstub = os.path.join(log_dir, '%s-$(cluster)-$(process)' % TAG)
+job.set_log_file('%s.log' % logstub)
+job.set_stdout_file('%s.out' % logstub)
+job.set_stderr_file('%s.err' % logstub)
+# job.add_condor_cmd('getenv', 'True')
+job.add_condor_cmd('+LIGOCAM', 'True')
+job.add_condor_cmd('priority', 20)
+job.add_condor_cmd('accounting_group', condor_accounting_group)
+job.add_condor_cmd('accounting_group_user', condor_accounting_group_user)
+if UNIVERSE != 'local':
+    job.add_condor_cmd('request_memory', REQUEST_MEMORY)
+
+# Add ligocam options
+job.add_opt('config_file', config_file)
+job.add_opt('current_time', str(current_time))
+
+# Make node in workflow for each channe list
+nodes = []
+for cl in channel_list_split:
+    node = pipeline.CondorDAGNode(job)
+    node.set_category('ligocam')
+    node.set_retry(RETRY)
+    node.add_var_arg(cl)
+    nodes.append(node)
+    dag.add_node(node)
+
+# Configure post-processing job
+post_job = pipeline.CondorDAGJob(UNIVERSE, PATH_TO_POSTPROCESSING)
+post_job.set_sub_file(post_sub_filename)
+logstub = os.path.join(log_dir, '%s-$(cluster)-$(process)' % TAG)
+post_job.set_log_file('%s.log' % logstub)
+post_job.set_stdout_file('%s.out' % logstub)
+post_job.set_stderr_file('%s.err' % logstub)
+post_job.add_condor_cmd('getenv', 'True')
+post_job.add_condor_cmd('accounting_group', condor_accounting_group)
+post_job.add_condor_cmd('accounting_group_user', condor_accounting_group_user)
+
+# Post-processing options
+post_job.add_opt('config_file', config_file)
+post_job.add_opt('current_time', str(current_time))
+
+# Make node for post-processing
+post_node = pipeline.CondorDAGNode(post_job)
+for node in nodes:
+    post_node.add_parent(node)
+post_node.set_category('ligocam_post')
+post_node.set_retry(RETRY)
+post_node.add_var_arg(channel_list)
+dag.add_node(post_node)
+
+# Write condor and DAG files and submit the DAG to condor
+dag.write_sub_files()
+dag.write_dag()
+
+# Set parents and child
+# with open(dagfile, 'r') as f:
+#     dag_lines = f.readlines()
+# job_lines = [line for line in dag_lines if sub_filename in line]
+# job_ids = [line.split(' ')[1] for line in job_lines]
+# post_job_line = [line for line in dag_lines if post_sub_filename in line][0]
+# post_job_id = post_job_line.split(' ')[1]
+# new_line = 'PARENT ' + ' '.join(job_ids) + ' CHILD ' + post_job_id + '\n'
+# dag_lines.append(new_line)
+# with open(dagfile, 'w') as f:
+#     f.writelines(dag_lines)
+
+subprocess.call('condor_submit_dag ' + dagfile, shell=True)

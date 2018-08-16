@@ -1,0 +1,115 @@
+#! /usr/bin/python
+
+from gwpy.time import from_gps, to_gps, tconvert
+import datetime
+import re
+import os
+import calendar
+
+CALENDAR_TEMPLATE = 'calendartemp.html'
+
+def create_calendar(year, month, urls, out_dir, calendar_template=CALENDAR_TEMPLATE):
+    firstdayoftheweek, maxdays = calendar.monthrange(year, month)
+    firstdayoftheweek = (firstdayoftheweek + 1) % 7 + 1
+    monthstr = str(month).zfill(2)
+    yearstr = str(year)
+    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    monthname = months[int(monthstr) - 1]
+    startdate = yearstr + '-' + monthstr + '-01-01'
+
+    ligocam_days = []
+    ligocam_hours = []
+    urls_thismonth = []
+    for u in urls:
+        match = re.search(r'(?<=LigoCamHTML_)([0-9]+)', u)
+        if match:
+            t = match.group(0)
+            utc = from_gps(t)
+            utcstr = datetime.datetime.strftime(utc, "%Y-%m-%d %H:%M:%S")
+            if utc.year == year and utc.month == month:
+                ligocam_days.append(utc.day)
+                ligocam_hours.append(utc.hour)
+                urls_thismonth.append(u)
+
+    s = ''
+    for week in range(1, 6):
+        s += "<!---------------------------------------- week " + str(week) + " ---------------------------------------->\n"
+        s += "            <div class=\"week\">\n"
+        for weekday in range(1, 8):
+            dayofthemonth = (week - 1) * 7 + weekday - firstdayoftheweek + 1
+            if dayofthemonth < 1:
+                s += "                <div class=\"day\"><div class=\"daybarempty\"><p></p></div><div class=\"dots\"><ul></ul></div></div>\n"
+            elif dayofthemonth > maxdays:
+                s += "                <div class=\"day\"><div class=\"daybarempty\"><p></p></div><div class=\"dots\"><ul></ul></div></div>\n"
+            else:
+                s += "                <div class=\"day\">\n"
+                s += "                    <div class=\"daybar\"><p>" + str(dayofthemonth) + "</p></div>\n"
+                s += "                        <div class=\"open\">\n"
+                s += "                        <ul>\n"
+                for hour in range(24):
+                    hourstr = str(hour).zfill(2)
+                    daystr = str(dayofthemonth).zfill(2)
+                    ymdhstr = yearstr + monthstr + daystr + hourstr
+                    link_class = 'sgrayl l1'
+                    link = hourstr + ":00"
+                    for i in range(len(urls_thismonth)):
+                        if ligocam_days[i] == dayofthemonth and ligocam_hours[i] == hour:
+                            link_class = 'greenish l1'
+                            link = "<a href=\"" + urls_thismonth[i] + "\">" + hourstr + ":00</a>"
+                    s += "<!-- " + ymdhstr + " --> <li class=\"" + link_class + "\"><p>" + link + "</p></li>\n"
+                s += "                        </ul>\n"
+                s += "                    </div>\n"
+                s += "                </div>\n"
+        s += "             </div>\n"
+
+    with open(calendar_template, 'r') as f:
+        text = f.read()
+    text = text.replace('<title>Month Year</title>', '<title>' + monthname + ' ' + yearstr + '</title>')
+    text = text.replace('<h2>Month Year</h2>', '<h2>' + monthname + ' ' + yearstr + '</h2>')
+    lines = text.splitlines()
+    for i in range(len(lines)):
+        if '<div id="daysmonth">' in lines[i]:
+            idx_insert = i+1
+            break
+
+    lines[idx_insert] = s
+    text = '\n'.join(lines)
+    htmlname = os.path.join(out_dir, 'LigoCAM_' + yearstr + '_' + monthstr + '.html')
+    with open(htmlname, 'w') as f:
+        f.write(text)
+
+if __name__ == '__main__':
+    import sys
+    from argparse import ArgumentParser
+    
+    parser = ArgumentParser()
+    parser.add_argument("out_dir", help="directory to save html calendars to")
+    parser.add_argument("start_date", default="04-2014", help="starting month month-year format, e.g. 04-2014 for April 2014")
+    parser.add_argument("end_date", default="12-2018", help="ending month month-year format, e.g. 04-2014 for April 2014")
+    parser.add_argument("--old", default="", help="file containing old URLs to include in new calendars")
+    args = parser.parse_args()
+    old_pages = args.old
+    if old_pages != '':
+        with open(old_pages, 'r') as f:
+            urls = f.read().split('\n')
+    else:
+        urls = []
+    out_dir = args.out_dir
+    start_date = args.start_date
+    end_date = args.end_date
+    start_month = int(start_date[:2])
+    start_year = int(start_date[3:])
+    end_month = int(end_date[:2])
+    end_year = int(end_date[3:])
+    print(out_dir)
+    for month in range(start_month, 13):
+        print(start_year, month)
+        create_calendar(start_year, month, urls, out_dir)
+    if end_year > 1 + start_year:
+        for year in range(start_year + 1, end_year):
+            for month in range(1, 13):
+                print(year, month)
+                create_calendar(year, month, urls, out_dir)
+    for month in range(1, end_month + 1):
+        print(end_year, month)
+        create_calendar(end_year, month, urls, out_dir)

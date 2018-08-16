@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+MAILTO=""
+
+30 * * * * $HOME/ligocam/etc/ligocam-cron

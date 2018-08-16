@@ -1,0 +1,45 @@
+#! /usr/bin/bash
+
+usage(){
+echo "Usage: $0 CONFIG SHARE_DIR"
+echo "  CONFIG: LigoCAM configuration file for ifo and subsystem"
+echo "  SHARE_DIR:  Directory with calendars and css/js files"
+}
+
+if [ $# -le 1 ]
+then
+    usage
+    exit 1
+fi
+
+if [[ ($# == '--help') || ($# == '-h') ]]
+then
+    usage
+    exit 1
+fi
+
+source <(grep -E 'run_dir|out_dir|ifo|subsystem' $1)
+share_dir=$2
+run_name=${ifo}_${subsystem}
+mkdir -m 777 -p $out_dir
+mkdir -m 777 -p $run_dir
+mkdir $out_dir/calendar
+mkdir $out_dir/images
+mkdir $out_dir/images/ASD
+mkdir $out_dir/images/TS
+mkdir $out_dir/pages
+mkdir $out_dir/results
+mkdir $out_dir/results/old
+mkdir $out_dir/status
+mkdir $run_dir/history
+mkdir $run_dir/jobs
+cp -r $share_dir/css $out_dir
+cp -r $share_dir/css $out_dir/status
+cp -r $share_dir/js $out_dir
+cp -r $share_dir/js $out_dir/status
+cp -r $share_dir/calendar/$run_name/* $out_dir/calendar
+cp -r $share_dir/calendar/css $out_dir/calendar
+cp -r $share_dir/calendar/js $out_dir/calendar
+cp -r $share_dir/daqfail_default.txt $run_dir
+cp -r $share_dir/disconn_default.txt $run_dir
+chmod -R 777 $out_dir $run_dir
