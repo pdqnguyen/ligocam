@@ -19,7 +19,7 @@ import os
 
 from . import plot as lcplot
 from . import utils as lcutils
-from . import (BLRMS_THRESHOLDS, SEGMENT_FREQS, NUM_SEGMENTS,
+from . import (SEGMENT_FREQS, NUM_SEGMENTS,
                SEGMENT_EDGES, SEGMENT_END_IDX)
 
 #=========================================================
@@ -112,32 +112,42 @@ def prep_data(freq, psd, psd_ref, duration,
     }
     return data_segs
 
-def check_status(channel, psd, psd_ref, disconn_hist_file, daqfail_hist_file, duration):
+def check_status(channel, psd, psd_ref, disconn_hist_file, \
+                 daqfail_hist_file, duration, \
+                 daqfail_thresholds, disconn_thresholds):
     """
     Check for disconnection or DAQ failure
     """
     
-    disconnect, comb = channel_status(channel, psd, duration)
-    if disconnect:
-        disconnhour = lcutils.get_disconnected_yes_hour(disconn_hist_file, channel)
+    disconn, daqfail = channel_status(
+        channel, psd, duration,
+        daqfail_thresholds, disconn_thresholds
+    )
+    if disconn:
+        disconnhour = lcutils.get_disconnected_yes_hour(
+            disconn_hist_file, channel
+        )
     else:
         disconnhour = 0
-    if comb:
-        daqfailhour = lcutils.get_daqfailure_yes_hour(daqfail_hist_file, channel)
+    if daqfail:
+        daqfailhour = lcutils.get_daqfailure_yes_hour(
+            daqfail_hist_file, channel
+        )
     else:
         daqfailhour = 0
     status_dict = {
-        'comb': comb,
-        'disconnect': disconnect,
-        'disconnhour': disconnhour,
-        'daqfailhour': daqfailhour
+        'daqfail': daqfail,
+        'disconn': disconn,
+        'disconn_hour': disconnhour,
+        'daqfail_hour': daqfailhour
     }
     return status_dict
 
-def check_blrms(channel, psd_binned_segs, psd_ref_binned_segs,
-                blrms_thresholds=BLRMS_THRESHOLDS):
+def check_blrms(channel, psd_binned_segs, psd_ref_binned_segs, 
+                blrms_thresholds):
     """
-    Compute band-limited RMS changes and determine if they exceed thresholds.
+    Compute band-limited RMS changes and determine
+    if they exceed thresholds.
     """
     
     blrms_dict = {}
@@ -151,26 +161,27 @@ def check_blrms(channel, psd_binned_segs, psd_ref_binned_segs,
             blrms_changes.append(0)
     if '_SEIS_' in channel:
         cond_1 = [x for x in blrms_changes[:3] if \
-                  x > blrms_thresholds['GREATER_1'] or \
-                  x < blrms_thresholds['LESS_1'] and x > 0]
+                  x > blrms_thresholds['greater_1'] or \
+                  x < blrms_thresholds['less_1'] and x > 0]
         cond_2 = [x for x in blrms_changes[3:6] if \
-                  x > blrms_thresholds['GREATER_2'] or \
-                  x < blrms_thresholds['LESS_2'] and x > 0]
+                  x > blrms_thresholds['greater_2'] or \
+                  x < blrms_thresholds['less_2'] and x > 0]
         excess = (len(cond_1) > 0 or len(cond_2) > 0)
     elif '_ACC_' in channel or '_MIC_' in channel:
         cond = [x for x in blrms_changes[6:] if \
-                x > blrms_thresholds['GREATER_2'] or \
-                x < blrms_thresholds['LESS_2'] and x > 0]
+                x > blrms_thresholds['greater_2'] or \
+                x < blrms_thresholds['less_2'] and x > 0]
         excess = (len(cond) > 0)
     else:
         cond_1 = [x for x in blrms_changes[:3] if \
-                  x > blrms_thresholds['GREATER_1'] or \
-                  x < blrms_thresholds['LESS_1'] and x > 0]
+                  x > blrms_thresholds['greater_1'] or \
+                  x < blrms_thresholds['less_1'] and x > 0]
         cond_2 = [x for x in blrms_changes[3:] if \
-                  x > blrms_thresholds['GREATER_2'] or \
-                  x < blrms_thresholds['LESS_2'] and x > 0]
+                  x > blrms_thresholds['greater_2'] or \
+                  x < blrms_thresholds['less_2'] and x > 0]
         excess = (len(cond_1) > 0 and len(cond_2) > 0)
-    blrms_dict = {'blrms_changes': blrms_changes, 'excess': excess}
+    blrms_dict = {'blrms_changes': blrms_changes, \
+                  'excess': excess}
     return blrms_dict
 
 
@@ -187,52 +198,16 @@ def check_blrms(channel, psd_binned_segs, psd_ref_binned_segs,
 # the various channel types and sampling rates
 
 
-# DEFAULT THRESHOLDS
-COMB_THRESHOLDS = {
-    'DEFAULT': 1e-8,
-    'SEIS': 1e-7,
-    'LOWFMIC_TEMPERATURE': 0.5e-3,
-    'TILT': 0.5e-3,
-    '0.3-20Hz': 1e-6,
-    '1-40Hz': 1e-7
-}
-DISCONN_THRESHOLDS = {
-    8: 0.44,
-    16: 0.62,
-    32: 0.88,
-    64: 1.25,
-    128: 1.78,
-    'DEFAULT': 2.0,
-    'SEIS': 0.1,
-    'ACC_MIC': 1.2,
-    'LOWFMIC_TEMPERATURE': 0.1,
-    'TILT': 0.2,
-    'MAG_MAINSMON': 0.2,
-    '128Hz_MAINSMON': 0.18
-}
-MAG_60Hz_THRESHOLDS = {
-    'MAG': 1000,
-    'MAGEXC': 100,
-    'MAINSMON': 1000
-}
-MAG_WEAK_CHANS = [
-    '-CS_MAG_LVEA_INPUTOPTICS_Y_',
-    '-EX_MAG_VEA_FLOOR_X_',
-    '-EX_MAG_VEA_FLOOR_Y_'
-]
-
-
 #====================================================
 
 
 
-def channel_status(channel, psd, duration,
-                   comb_thresholds=COMB_THRESHOLDS,
-                   disconn_thresholds=DISCONN_THRESHOLDS,
-                   mag_60hz_thresholds=MAG_60Hz_THRESHOLDS,
-                   mag_weak_chans=MAG_WEAK_CHANS):
+def channel_status(channel, psd, duration, daqfail_thresholds, \
+                   disconn_thresholds):
     """
-    Check channel PSD to determine status. 
+    Check channel PSD to determine status. Different
+    calculation methods are performed for the various
+    channel types and sampling rates.
     """
     
     freq_max = len(psd) // duration
@@ -268,14 +243,14 @@ def channel_status(channel, psd, duration,
     
     #### SPECIAL CASES ####
     
-    if any([weak_chan in channel for weak_chan in mag_weak_chans]):
+    weak_mag_chans = disconn_thresholds['weak_mag_chans']
+    if any([weak_chan in channel for weak_chan in weak_mag_chans]):
         p10_100 = psd[rng10_100]
         p59_61 = np.sqrt(psd[rng59_61])
-        comb_th = comb_thresholds['DEFAULT']
-        mag_th = mag_60hz_thresholds['MAGEXC']
-        disconnect = (np.amax(p59_61) < mag_th and \
-                      np.amin(np.sqrt(p10_100)) > comb_th)
-        comb = (np.amin(np.sqrt(p10_100)) < comb_th)
+        daqfail_th = daqfail_thresholds['default']
+        mag_th = disconn_thresholds['magexc']
+        daqfail = (np.amin(np.sqrt(p10_100)) < daqfail_th)
+        disconn = (np.amax(p59_61) < mag_th and not daqfail)
     
     
     #### CHANNELS 128 Hz AND BELOW ####
@@ -283,50 +258,50 @@ def channel_status(channel, psd, duration,
     elif freq_max < 128:
         if freq_max == 8:
             rng = range(int(0.3*duration + 1), 5*duration)
-            comb_th = comb_thresholds['0.3-20Hz']
+            daqfail_th = daqfail_thresholds['0.3-20hz']
         elif freq_max == 16:
             rng = range(int(0.3*duration + 1), 10*duration)
-            comb_th = comb_thresholds['0.3-20Hz']
+            daqfail_th = daqfail_thresholds['0.3-20hz']
         elif freq_max == 32:
-            rng = range(duration, 20*duration)
-            comb_th = comb_thresholds['0.3-20Hz']
+            rng = range(1 * duration, 20*duration)
+            daqfail_th = daqfail_thresholds['0.3-20hz']
         elif freq_max == 64:
-            rng = range(duration, 40*duration)
-            comb_th = comb_thresholds['1-40Hz']
-        disconn_th = disconn_thresholds[freq_max]
+            rng = range(1 * duration, 40*duration)
+            daqfail_th = daqfail_thresholds['1-40hz']
+        disconn_th = disconn_thresholds[str(freq_max) + 'hz']
         psd_seg = psd[rng]
-        disconnect = (np.sqrt(sum(psd_seg) * 1/duration) < disconn_th and \
-                      np.amin(np.sqrt(psd_seg)) > comb_th)
-        comb = (np.amin(np.sqrt(psd_seg)) < comb_th)
+        daqfail = (np.amin(np.sqrt(psd_seg)) < daqfail_th)
+        disconn = (np.sqrt(sum(psd_seg) * 1/duration) < disconn_th and \
+                   not daqfail)
     
     
     #### LOW-FREQ SENSORS ####
     
     elif '_SEIS_' in channel:
         p_seis = psd[rng_seis]
-        disconn_th = disconn_thresholds['SEIS']
-        comb_th = comb_thresholds['SEIS']
-        disconnect = (np.sqrt(sum(p_seis) * 1/duration) < disconn_th and \
-                      np.amin(np.sqrt(p_seis)) > comb_thresholds['SEIS'])
-        comb = (np.amin(np.sqrt(p_seis)) < comb_thresholds['SEIS'])
+        disconn_th = disconn_thresholds['seis']
+        daqfail_th = daqfail_thresholds['seis']
+        daqfail = (np.amin(np.sqrt(p_seis)) < daqfail_thresholds['seis'])
+        disconn = (np.sqrt(sum(p_seis) * 1/duration) < disconn_th and \
+                   not daqfail)
     elif '_LOWFMIC_' in channel or '_TEMPERATURE_' in channel:
         p_lowfmictemp = psd[rng_lowfmictemp]
-        disconn_th = disconn_thresholds['LOWFMIC_TEMPERATURE']
-        comb_th = comb_thresholds['LOWFMIC_TEMPERATURE']
-        disconnect = (np.sqrt(sum(p_lowfmictemp) * 1/duration) < disconn_th and \
-                      np.amin(np.sqrt(p_lowfmictemp)) > comb_th * 0.1)
+        disconn_th = disconn_thresholds['lowfmic_temperature']
+        daqfail_th = daqfail_thresholds['lowfmic_temperature']
+        disconn = (np.sqrt(sum(p_lowfmictemp) * 1/duration) < disconn_th and \
+                   np.amin(np.sqrt(p_lowfmictemp)) > daqfail_th * 0.1)
         asd = np.sqrt(p_lowfmictemp)
-        comb_num = sum(j < comb_th for j in asd)
-        comb = (comb_num > 5)
+        daqfail_num = sum(j < daqfail_th for j in asd)
+        daqfail = (daqfail_num > 5)
     elif '_TILT_' in channel:
         p_tilt = psd[rng_tilt]
-        disconn_th = disconn_thresholds['TILT']
-        comb_th = comb_thresholds['TILT']
-        disconnect = (np.sqrt(sum(p_tilt) * 1/duration) < disconn_th and \
-                      np.amin(np.sqrt(p_tilt)) > comb_th * 0.1)
+        disconn_th = disconn_thresholds['tilt']
+        daqfail_th = daqfail_thresholds['tilt']
+        disconn = (np.sqrt(sum(p_tilt) * 1/duration) < disconn_th and \
+                   np.amin(np.sqrt(p_tilt)) > daqfail_th * 0.1)
         asd = np.sqrt(p_tilt)
-        comb_num = sum(j < comb_th for j in asd)
-        comb = (comb_num > 5)
+        daqfail_num = sum(j < daqfail_th for j in asd)
+        daqfail = (daqfail_num > 5)
     
     
     #### CHANNELS 256 Hz ####
@@ -335,32 +310,31 @@ def channel_status(channel, psd, duration,
         # Special case for 256hz incorrect LHO MAINSMON
         if '_MAINSMON_' in channel:
             p10_80 = psd[rng10_80]
-            p59_61 = np.sqrt(psd[rng59_61])
-            disconn_th = disconn_thresholds['128Hz_MAINSMON']
-            comb_th = comb_thresholds['DEFAULT']
-            mag_th = mag_60hz_thresholds['MAINSMON']
-            disconnect = (np.sqrt(sum(p10_80) * 1/duration) < disconn_th and \
-                           np.amin(np.sqrt(p10_80)) > comb_th and \
-                           np.amax(p59_61) < mag_th)
-            comb = (np.amin(np.sqrt(p10_80)) < comb_th)
+            p59_61 = psd[rng59_61]
+            disconn_th = disconn_thresholds['128hz_mainsmon']
+            daqfail_th = daqfail_thresholds['default']
+            mag_th = disconn_thresholds['mainsmon']
+            daqfail = (np.amin(np.sqrt(p10_80)) < daqfail_th)
+            disconn = (np.sqrt(sum(p10_80) * 1/duration) < disconn_th and \
+                       np.amax(np.sqrt(p59_61)) < mag_th and not daqfail)
         else:
             p1_80 = psd[rng1_80]
-            disconn_th = disconn_thresholds[freq_max]
-            comb_th = comb_thresholds['DEFAULT']
-            disconnect = (np.sqrt(sum(p1_80) * 1/duration) < disconn_th and \
-                          np.amin(np.sqrt(p1_80)) > comb_th)
-            comb = (np.amin(np.sqrt(p1_80)) < comb_th)
+            disconn_th = disconn_thresholds[str(freq_max) + 'hz']
+            daqfail_th = daqfail_thresholds['default']
+            daqfail = (np.amin(np.sqrt(p1_80)) < daqfail_th)
+            disconn = (np.sqrt(sum(p1_80) * 1/duration) < disconn_th and \
+                       not daqfail)
     
     
     #### CHANNELS 512 Hz ####
     
     elif freq_max == 256:
         p10_100 = psd[rng10_100]
-        disconn_th = disconn_thresholds['DEFAULT']
-        comb_th = comb_thresholds['DEFAULT']
-        disconnect = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
-                      np.amin(np.sqrt(p10_100)) > comb_th)
-        comb = (np.amin(np.sqrt(p10_100)) < comb_th)
+        disconn_th = disconn_thresholds['default']
+        daqfail_th = daqfail_thresholds['default']
+        daqfail = (np.amin(np.sqrt(p10_100)) < daqfail_th)
+        disconn = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
+                   not daqfail)
     
     
     #### CHANNELS 1024 Hz AND OVER ####
@@ -368,36 +342,34 @@ def channel_status(channel, psd, duration,
     else:
         if '_ACC_' in channel or '_MIC_' in channel:
             p10_300 = psd[rng10_300]
-            disconn_th = disconn_thresholds['ACC_MIC']
-            comb_th = comb_thresholds['DEFAULT']
-            disconnect = (np.sqrt(sum(p10_300) * 1/duration) < disconn_th and \
-                          np.amin(np.sqrt(p10_300)) > comb_th)
-            comb = (np.amin(np.sqrt(p10_300)) < comb_th)
+            disconn_th = disconn_thresholds['acc_mic']
+            daqfail_th = daqfail_thresholds['default']
+            daqfail = (np.amin(np.sqrt(p10_300)) < daqfail_th)
+            disconn = (np.sqrt(sum(p10_300) * 1/duration) < disconn_th and \
+                       not daqfail)
         elif '_MAG_' in channel:
             p10_100 = psd[rng10_100]
-            p59_61 = np.sqrt(psd[rng59_61])
-            comb_th = comb_thresholds['DEFAULT']
-            mag_th = mag_60hz_thresholds['MAG']
-            disconnect = (np.amax(p59_61) < mag_th and \
-                          np.amin(np.sqrt(p10_100)) > comb_th)
-            comb = (np.amin(np.sqrt(p10_100)) < comb_th)
+            p59_61 = psd[rng59_61]
+            daqfail_th = daqfail_thresholds['default']
+            mag_th = disconn_thresholds['mag']
+            daqfail = (np.amin(np.sqrt(p10_100)) < daqfail_th)
+            disconn = (np.amax(np.sqrt(p59_61)) < mag_th and not daqfail)
         # Mar 31, 2015 LHO made this choice.
         elif '_MAINSMON_' in channel:
             p10_100 = psd[rng10_100]
-            p59_61 = np.sqrt(psd[rng59_61])
-            disconn_th = disconn_thresholds['MAG_MAINSMON']
-            comb_th = comb_thresholds['DEFAULT']
-            mag_th = mag_60hz_thresholds['MAINSMON']
-            disconnect = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
-                          np.amax(p59_61) < mag_th and \
-                          np.amin(np.sqrt(p10_100)) > comb_th)
-            comb = (np.amin(np.sqrt(p10_100)) < comb_th)
+            p59_61 = psd[rng59_61]
+            disconn_th = disconn_thresholds['mag_mainsmon']
+            daqfail_th = daqfail_thresholds['default']
+            mag_th = disconn_thresholds['mainsmon']
+            daqfail = (np.amin(np.sqrt(p10_100)) < daqfail_th)
+            disconn = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
+                       np.amax(np.sqrt(p59_61)) < mag_th and not daqfail)
         else:
             p10_100 = psd[rng10_100]
-            disconn_th = disconn_thresholds['DEFAULT']
-            comb_th = comb_thresholds['DEFAULT']
-            disconnect = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
-                          np.amin(np.sqrt(p10_100)) > comb_th)
-            comb = (np.amin(np.sqrt(p10_100)) < comb_th)
+            disconn_th = disconn_thresholds['default']
+            daqfail_th = daqfail_thresholds['default']
+            daqfail = (np.amin(np.sqrt(p10_100)) < daqfail_th)
+            disconn = (np.sqrt(sum(p10_100) * 1/duration) < disconn_th and \
+                       not daqfail)
     
-    return disconnect, comb
+    return disconn, daqfail
