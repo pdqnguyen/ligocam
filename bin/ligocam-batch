@@ -27,6 +27,7 @@ import subprocess
 import sys
 from ConfigParser import ConfigParser
 from argparse import ArgumentParser
+from getpass import getuser
 from glue import pipeline
 from glue.datafind import GWDataFindHTTPConnection
 from pylal import frutils
@@ -38,14 +39,20 @@ TAG = 'ligocam-batch'
 UNIVERSE = 'vanilla'
 REQUEST_MEMORY = 4096
 RETRY = 0
-PATH_TO_LIGOCAM = 'ligocam'
-PATH_TO_POSTPROCESSING = 'ligocam-post'
+LIGOCAM = os.path.join(os.path.dirname(__file__), 'ligocam')
+LIGOCAM_POST = os.path.join(os.path.dirname(__file__), 'ligocam-post')
+CONDOR_ACCOUNTING_GROUP = os.getenv(
+    '_CONDOR_ACCOUNTING_GROUP', 'ligo.prod.o2.detchar.chan_mon.ligocam')
+CONDOR_ACCOUNTING_USER = os.getenv(
+    '_CONDOR_ACCOUNTING_USER', getuser())
 
 #========================================================================
 
 # Argument parsing
 argparser = ArgumentParser()
 argparser.add_argument('config_file', help="LigoCAM configuration file.")
+argparser.add_argument('-u', '--universe', default=UNIVERSE, type=str,
+                       help='universe for condor processing')
 args = argparser.parse_args()
 config_file = args.config_file
 
@@ -57,8 +64,6 @@ frame_type = config.get('Run', 'frame_type')
 channels_per_job = int(config.get('Run', 'channels_per_job'))
 lookback_time = int(config.get('Run', 'lookback_time'))
 duration = int(config.get('Run', 'duration'))
-condor_accounting_group = config.get('Condor', 'condor_accounting_group')
-condor_accounting_group_user = config.get('Condor', 'condor_accounting_group_user')
 run_dir = config.get('Paths', 'run_dir')
 out_dir = config.get('Paths', 'out_dir')
 channel_list = config.get('Paths', 'channel_list')
@@ -138,7 +143,7 @@ dagfile = dag.get_dag_file()
 # Configure ligocam job
 sub_filename = '%s.sub' % os.path.splitext(dagfile)[0]
 post_sub_filename = sub_filename.replace('batch', 'post')
-job = pipeline.CondorDAGJob(UNIVERSE, PATH_TO_LIGOCAM)
+job = pipeline.CondorDAGJob(UNIVERSE, LIGOCAM)
 job.set_sub_file(sub_filename)
 logstub = os.path.join(log_dir, '%s-$(cluster)-$(process)' % TAG)
 job.set_log_file('%s.log' % logstub)
@@ -147,8 +152,8 @@ job.set_stderr_file('%s.err' % logstub)
 job.add_condor_cmd('getenv', 'True')
 job.add_condor_cmd('+LIGOCAM', 'True')
 job.add_condor_cmd('priority', 20)
-job.add_condor_cmd('accounting_group', condor_accounting_group)
-job.add_condor_cmd('accounting_group_user', condor_accounting_group_user)
+job.add_condor_cmd('accounting_group', CONDOR_ACCOUNTING_GROUP)
+job.add_condor_cmd('accounting_group_user', CONDOR_ACCOUNTING_USER)
 if UNIVERSE != 'local':
     job.add_condor_cmd('request_memory', REQUEST_MEMORY)
 
@@ -167,15 +172,15 @@ for cl in channel_list_split:
     dag.add_node(node)
 
 # Configure post-processing job
-post_job = pipeline.CondorDAGJob(UNIVERSE, PATH_TO_POSTPROCESSING)
+post_job = pipeline.CondorDAGJob(UNIVERSE, LIGOCAM_POST)
 post_job.set_sub_file(post_sub_filename)
 logstub = os.path.join(log_dir, '%s-$(cluster)-$(process)' % TAG)
 post_job.set_log_file('%s.log' % logstub)
 post_job.set_stdout_file('%s.out' % logstub)
 post_job.set_stderr_file('%s.err' % logstub)
 post_job.add_condor_cmd('getenv', 'True')
-post_job.add_condor_cmd('accounting_group', condor_accounting_group)
-post_job.add_condor_cmd('accounting_group_user', condor_accounting_group_user)
+post_job.add_condor_cmd('accounting_group', CONDOR_ACCOUNTING_GROUP)
+post_job.add_condor_cmd('accounting_group_user', CONDOR_ACCOUNTING_USER)
 
 # Post-processing options
 post_job.add_opt('config_file', config_file)
