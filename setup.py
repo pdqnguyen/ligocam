@@ -30,8 +30,7 @@ setup(
 	description='LIGO Channel Activity Monitor',
 	license='GNU General Public License Version 3',
 	packages=find_packages(),
-    package_data={'etc': ['crontab.txt']},
-    include_package_data=True,
+	include_package_data=True,
 	scripts=[
 		'bin/ligocam',
 		'bin/ligocam-batch',
