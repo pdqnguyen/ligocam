@@ -27,21 +27,21 @@ for root, dirnames, filenames in os.walk('etc'):
     for filename in filenames:
         path = os.path.join(root, filename)
         data_files.append((root, path))
-print data_files
 setup(
-	name='ligocam',
-	version='0.0',
-	url='http://pem.ligo.org',
-	author='Dipongkar Talukder',
-	author_email='dipongkar.talukder@ligo.org',
-	description='LIGO Channel Activity Monitor',
-	license='GNU General Public License Version 3',
-	packages=find_packages(),
-	include_package_data=True,
-	scripts=[
-		'bin/ligocam',
-		'bin/ligocam-batch',
-		'bin/ligocam-post',
-		'bin/ligocam-setup'
-	]
+    name='ligocam',
+    version='0.0',
+    url='http://pem.ligo.org',
+    author='Dipongkar Talukder',
+    author_email='dipongkar.talukder@ligo.org',
+    description='LIGO Channel Activity Monitor',
+    license='GNU General Public License Version 3',
+    packages=find_packages(),
+    include_package_data=True,
+    scripts=[
+        'bin/ligocam',
+        'bin/ligocam-batch',
+        'bin/ligocam-post',
+        'bin/ligocam-setup'
+    ],
+    data_files=data_files
 )
