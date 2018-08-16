@@ -20,6 +20,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from setuptools import setup, find_packages
+import os
 
 setup(
 	name='ligocam',
@@ -36,5 +37,8 @@ setup(
 		'bin/ligocam-batch',
 		'bin/ligocam-post',
 		'bin/ligocam-setup'
+	],
+	data_files=[
+		('{}/.local/share/ligocam/'.format(os.environ['HOME']),['etc/*'])
 	]
 )
