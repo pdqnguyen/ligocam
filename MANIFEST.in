@@ -1,2 +1,2 @@
 include COPYING README
-recursive-include etc *
+include etc/*
