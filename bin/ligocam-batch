@@ -38,8 +38,8 @@ TAG = 'ligocam-batch'
 UNIVERSE = 'vanilla'
 REQUEST_MEMORY = 4096
 RETRY = 0
-PATH_TO_LIGOCAM = '/home/philippe.nguyen/ligocam/ligocam.py'
-PATH_TO_POSTPROCESSING = '/home/philippe.nguyen/ligocam/ligocam-post.py'
+PATH_TO_LIGOCAM = 'ligocam'
+PATH_TO_POSTPROCESSING = 'ligocam-post'
 
 #========================================================================
 
