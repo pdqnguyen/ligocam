@@ -42,6 +42,6 @@ setup(
         'bin/ligocam-batch',
         'bin/ligocam-post',
         'bin/ligocam-setup'
-    ],
-    data_files=data_files
+    ]
+    # data_files=data_files
 )
