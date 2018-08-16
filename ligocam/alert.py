@@ -35,7 +35,8 @@ def find_bad_channels(file, search_for=1):
             bad_channels.append(split[0])
     return sorted(set(bad_channels))
 
-def write_email(email_config, disconn_channels, daqfail_channels,
+def write_email(email_to, email_from, email_replyto,
+                disconn_channels, daqfail_channels,
                 ifo, subsystem, url, alert_epoch):
     """
     Write email alert for disconnected and DAQ failure channels.
@@ -49,11 +50,6 @@ def write_email(email_config, disconn_channels, daqfail_channels,
     else:
         return
     subject_line = '[LigoCAM] %s alert for %s %s' % (alertby, ifo, subsystem)
-    config = ConfigParser()
-    config.read(email_config)
-    email_to = config.get('email', 'To')
-    email_from = config.get('email', 'From')
-    email_replyto = config.get('email', 'Reply-to')
     message =  'To: %s\n' % email_to
     message += 'From: %s\n' % email_from
     message += 'Reply-to: %s\n' % email_replyto
