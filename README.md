@@ -17,7 +17,8 @@ python -m pip install --user git+https://github.com/pdqnguyen/ligocam.git
 ## Setup
 Each ifo and subsystem is run from its own config file. For first-time setup,
 edit the configuration file for the desired ifo and subsystem
-to your liking and feed it to ligocam-setup, e.g.
+to your liking and feed it to ligocam-setup with the directory containing
+the necessary static files, e.g.
 ```
 ligocam-setup <config_file> <share_directory>
 ```
@@ -33,5 +34,5 @@ Acceptable reference PSDs and the number of hours a channel has been
 disconnected or had a DAQ failure are all logged in the run directory.
 These records can be deleted via
 ```
-restart-channel <config_file> <channel_name>
+ligocam-reset <config_file> <channel_name>
 ```
