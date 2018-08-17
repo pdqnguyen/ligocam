@@ -39,9 +39,6 @@ from ligocam import alert as lcalert
 from ligocam import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
 
 __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
-# Send alert emails for these hours
-EMAIL_DISCONN = 12
-EMAIL_DAQFAIL = 12
 
 #================================================
 
@@ -64,6 +61,8 @@ ifo = config.get('Run', 'ifo')
 subsystem = config.get('Run', 'subsystem')
 email_to = config.get('Email', 'To')
 email_replyto = config.get('Email', 'Reply-to')
+email_disconn = config.get('Email', 'disconn_hour')
+email_daqfail = config.get('Email', 'daqfail_hour')
 run_dir = config.get('Paths', 'run_dir')
 out_dir = config.get('Paths', 'out_dir')
 pub_url = config.get('Paths', 'public_url')
@@ -157,8 +156,8 @@ results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_%s.htm
 lcutils.edit_calendar(calendar_file, results_url, current_time)
 
 # Send email alert if there are any bad channels
-disconn_channels = lcalert.find_bad_channels(disconn_now, search_for=EMAIL_DISCONN)
-daqfail_channels = lcalert.find_bad_channels(daqfail_now, search_for=EMAIL_DAQFAIL)
+disconn_channels = lcalert.find_bad_channels(disconn_now, search_for=email_disconn)
+daqfail_channels = lcalert.find_bad_channels(daqfail_now, search_for=email_daqfail)
 if len(disconn_channels) > 0 or len(daqfail_channels) > 0:
     results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_' + str(current_time) + '.html')
     message = lcalert.write_email(email_to, email_replyto, disconn_channels, daqfail_channels,

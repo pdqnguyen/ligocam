@@ -18,10 +18,12 @@ import subprocess
 from ConfigParser import ConfigParser
 
 SENDMAIL = '/usr/sbin/sendmail'
+# Send alert emails for these hours
+EMAIL_HOUR
 
 #================================================
 
-def find_bad_channels(file, search_for=1):
+def find_bad_channels(file, search_for=EMAIL_HOUR):
     """
     Search for channels which have been disconnected
     or have had DAQ failures in the last hour.

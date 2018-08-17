@@ -52,8 +52,10 @@ print "start time %s (%s)" % (timestamp, tconvert(timestamp))
 
 # Argument parsing
 argparser = ArgumentParser()
-argparser.add_argument('-c', '--config_file', help="LigoCAM configuration file.")
-argparser.add_argument('-t', '--current_time', type=int, help="Current GPS time.")
+argparser.add_argument('-c', '--config_file', \
+                       help="LigoCAM configuration file.")
+argparser.add_argument('-t', '--current_time', type=int, \
+                       help="Current GPS time.")
 argparser.add_argument('channel_list', help="Channel list.")
 args = argparser.parse_args()
 config_file = args.config_file
@@ -78,8 +80,10 @@ hist_dir = os.path.join(run_dir, 'history')
 job_dir = os.path.join(run_dir, 'jobs', str(current_time))
 cache_dir = os.path.join(job_dir, 'cache')
 results_dir = os.path.join(job_dir, 'results')
-asd_dir = os.path.join(out_dir, 'images', 'ASD', year_month_str, str(current_time))
-ts_dir = os.path.join(out_dir, 'images', 'TS', year_month_str, str(current_time))
+asd_dir = os.path.join(
+    out_dir, 'images', 'ASD',  year_month_str, str(current_time))
+ts_dir = os.path.join(
+    out_dir, 'images', 'TS', year_month_str, str(current_time))
 
 for d in [hist_dir, cache_dir, results_dir, asd_dir, ts_dir]:
     if not os.path.exists(d):
@@ -88,10 +92,14 @@ for d in [hist_dir, cache_dir, results_dir, asd_dir, ts_dir]:
 # Threshold dictionaries
 thresholds = ConfigParser()
 thresholds.read(thresholds_config)
-blrms_thresholds = {key: float(value) for key, value in thresholds.items('BLRMS')}
-daqfail_thresholds = {key: float(value) for key, value in thresholds.items('DAQFailure')}
-disconn_thresholds = {key: float(value) for key, value in thresholds.items('Disconnection')}
-disconn_thresholds['weak_mag_chans'] = [value for key, value in thresholds.items('Weak Magnetometers')]
+blrms_thresholds = {
+    key: float(value) for key, value in thresholds.items('BLRMS')}
+daqfail_thresholds = {
+    key: float(value) for key, value in thresholds.items('DAQFailure')}
+disconn_thresholds = {
+    key: float(value) for key, value in thresholds.items('Disconnection')}
+disconn_thresholds['weak_mag_chans'] = [
+    value for key, value in thresholds.items('Weak Magnetometers')]
 
 # Get channel list
 with open(channel_list, 'r') as f:
@@ -110,7 +118,8 @@ for channel in channels:
     
     t_fetch = time.time()
     try:
-        timeseries, psd, freq = lcutils.get_data(frame_cache_current, channel_name, current_time, duration)
+        timeseries, psd, freq = lcutils.get_data(
+            frame_cache_current, channel_name, current_time, duration)
     except:
         print traceback.print_exc()
         continue
@@ -124,8 +133,10 @@ for channel in channels:
         try:
             psd_ref_all_hours = []
             for ref_time, frame_cache in frame_cache_refs:
-                _, psd_ref_hour, _ = lcutils.get_data(frame_cache, channel_name, ref_time, duration)
-                psd_ref_hour = lcrefutils.get_psd_ref_binned(psd_ref_hour, duration)
+                _, psd_ref_hour, _ = lcutils.get_data(
+                    frame_cache, channel_name, ref_time, duration)
+                psd_ref_hour = lcrefutils.get_psd_ref_binned(
+                    psd_ref_hour, duration)
                 psd_ref_all_hours.append(psd_ref_hour)
             psd_ref = (psd_ref_all_hours[0] + psd_ref_all_hours[1]) / 2
             for p in psd_ref_all_hours[2:]:
@@ -155,10 +166,13 @@ for channel in channels:
     psd_binned_segs = data_segs['psd_binned']
     psd_ref_binned_segs = data_segs['psd_ref_binned']
     # Check for disconnection or DAQ failure
-    status_dict = lcanalysis.check_status(channel, psd, psd_ref, disconn_past, daqfail_past, duration, \
-                                          daqfail_thresholds, disconn_thresholds)
+    status_dict = lcanalysis.check_status(
+        channel, psd, psd_ref, disconn_past, daqfail_past,
+        duration, daqfail_thresholds, disconn_thresholds
+    )
     # Check for large BLRMS changes
-    blrms_dict = lcanalysis.check_blrms(channel, psd_binned_segs, psd_ref_binned_segs, blrms_thresholds)
+    blrms_dict = lcanalysis.check_blrms(
+        channel, psd_binned_segs, psd_ref_binned_segs, blrms_thresholds)
     # Combine results
     results = dict(status_dict.items() + blrms_dict.items())
     
@@ -168,7 +182,8 @@ for channel in channels:
     else:
         results['status'] = 'Ok'
         psd_ref_new = np.concatenate(psd_binned_segs, axis=0)
-        filename = os.path.join(hist_dir, channel.replace(':', '_') + '.txt')
+        filename = os.path.join(
+            hist_dir, channel.replace(':', '_') + '.txt')
         lcrefutils.save_new_ref(psd_ref, psd_ref_new, filename)
         
     dt_analysis = time.time() - t_analysis
@@ -188,7 +203,8 @@ for channel in channels:
     line.append('%.2g' % results['daqfail_hour'])
     
     # Save results
-    results_filename = os.path.join(results_dir, 'result_' + channel_filename + '.txt')
+    results_filename = os.path.join(
+        results_dir, 'result_' + channel_filename + '.txt')
     with open(results_filename,'w') as results_file:
         results_file.write(','.join(line) + '\n')
     
@@ -196,9 +212,11 @@ for channel in channels:
     disconn_new = os.path.join(results_dir, 'disconn_' + channel_filename)
     daqfail_new = os.path.join(results_dir, 'daqfail_' + channel_filename)
     with open(disconn_new, 'w') as disconn_file:
-        disconn_file.write("%s  %.2g\n" % (channel_name, results['disconn_hour']))
+        disconn_file.write(
+            "%s  %.2g\n" % (channel_name, results['disconn_hour']))
     with open(daqfail_new, 'w') as daqfail_file:
-        daqfail_file.write("%s  %.2g\n" % (channel_name, results['daqfail_hour']))
+        daqfail_file.write(
+            "%s  %.2g\n" % (channel_name, results['daqfail_hour']))
     
     # Plot spectra and time series
     asd_segs = [np.sqrt(seg) for seg in psd_segs]
@@ -206,9 +224,11 @@ for channel in channels:
     asd_ref_binned_segs = [np.sqrt(seg) for seg in psd_ref_binned_segs]
     ts_file = os.path.join(ts_dir, channel.replace(':', '_') + '.png')
     asd_file = os.path.join(asd_dir, channel.replace(':', '_') + '.png')
-    lcplot.timeseries_plot(channel, ts_file, timeseries, duration, current_time_utc)
-    lcplot.asd_plot(channel, asd_file, freq_segs, freq_binned_segs, asd_segs,
-                    asd_binned_segs, asd_ref_binned_segs, current_time_utc)
+    lcplot.timeseries_plot(
+        channel, ts_file, timeseries, duration, current_time_utc)
+    lcplot.asd_plot(
+        channel, asd_file, freq_segs, freq_binned_segs, asd_segs,
+        asd_binned_segs, asd_ref_binned_segs, current_time_utc)
 
 end_time = tconvert()
 print "total time", str(end_time - timestamp)
