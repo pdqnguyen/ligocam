@@ -71,7 +71,8 @@ def create_html(filename, results_file, ifo, subsystem, current_utc,
         info_url = "%s?channelname=%s" % (pem_map_url, chan_url)
         asd_url = os.path.join(asd_path, chan_file)
         ts_url = os.path.join(ts_path, chan_file)
-        row = create_html_row(results, asd_url, ts_url, blrms_thresholds, info_url=info_url)
+        row = create_html_row(
+            results, asd_url, ts_url, blrms_thresholds, info_url=info_url)
         table.rows.append(row)
     
     # Write HTML page to file
@@ -156,23 +157,29 @@ def create_html_row(results, asd_url, ts_url, blrms_thresholds, info_url=None):
 
     # Cells for channel status
     if excess == 'Yes':
-        cells['excess'] = htmllib.TableCell(excess, bgcolor='FFD280', width='4%')
+        cells['excess'] = htmllib.TableCell(
+            excess, bgcolor='FFD280', width='4%')
     else:
-        cells['excess'] = htmllib.TableCell(excess, bgcolor='white', width='4%')
+        cells['excess'] = htmllib.TableCell(
+            excess, bgcolor='white', width='4%')
     if daqfail == 'Yes':
-        cells['daqfail'] = htmllib.TableCell('%s (%s h)' % (daqfail, daqfail_hour), \
-                                          bgcolor='FF9771', width='4%')
+        cells['daqfail'] = htmllib.TableCell(
+            '%s (%s h)' % (daqfail, daqfail_hour), bgcolor='FF9771', width='4%')
     else:
-        cells['daqfail'] = htmllib.TableCell(daqfail, bgcolor='white', width='4%')
+        cells['daqfail'] = htmllib.TableCell(
+            daqfail, bgcolor='white', width='4%')
     if disconn == 'Yes':
-        cells['disconn'] = htmllib.TableCell('%s (%s h)' % (disconn, disconn_hour), \
-                                                bgcolor='FF6633', width='6%')
+        cells['disconn'] = htmllib.TableCell(
+            '%s (%s h)' % (disconn, disconn_hour), bgcolor='FF6633', width='6%')
     else:
-        cells['disconn'] = htmllib.TableCell(disconn, bgcolor='white', width='6%')
+        cells['disconn'] = htmllib.TableCell(
+            disconn, bgcolor='white', width='6%')
     if status == 'Alert':
-        cells['status'] = htmllib.TableCell(status, bgcolor='FFFF00', width='4%')
+        cells['status'] = htmllib.TableCell(
+            status, bgcolor='FFFF00', width='4%')
     else:
-        cells['status'] = htmllib.TableCell(status, bgcolor='00FF00', width='4%')
+        cells['status'] = htmllib.TableCell(
+            status, bgcolor='00FF00', width='4%')
     
     # Create BLRMS cells
     blrms_cells = []
@@ -180,32 +187,44 @@ def create_html_row(results, asd_url, ts_url, blrms_thresholds, info_url=None):
         if i < 3:
             if x > thd1g or (x < thd1l and x != 0):
                 if '_ACC_' in chan or '_MIC_' in chan:
-                    blrms_cells.append(htmllib.TableCell(x, bgcolor='E8E8E8', width='4%'))
+                    blrms_cells.append(
+                        htmllib.TableCell(x, bgcolor='E8E8E8', width='4%'))
                 else:
-                    blrms_cells.append(htmllib.TableCell(x, bgcolor='FFD280', width='4%'))
+                    blrms_cells.append(
+                        htmllib.TableCell(x, bgcolor='FFD280', width='4%'))
             elif x == 0:
-                blrms_cells.append(htmllib.TableCell(' ', bgcolor='white', width='4%'))
+                blrms_cells.append(
+                    htmllib.TableCell(' ', bgcolor='white', width='4%'))
             else:
-                blrms_cells.append(htmllib.TableCell(x, bgcolor='white', width='4%'))
+                blrms_cells.append(
+                    htmllib.TableCell(x, bgcolor='white', width='4%'))
         else:
             if x > thd2g or (x < thd2l and x != 0):
                 if (i < 5) and ('_ACC_' in chan or '_MIC_' in chan) or\
                    (i > 5) and ('_SEIS_' in chan):
-                    blrms_cells.append(htmllib.TableCell(x, bgcolor='E8E8E8', width='4%'))
+                    blrms_cells.append(
+                        htmllib.TableCell(x, bgcolor='E8E8E8', width='4%'))
                 else:
-                    blrms_cells.append(htmllib.TableCell(x, bgcolor='FFD280', width='4%'))
+                    blrms_cells.append(
+                        htmllib.TableCell(x, bgcolor='FFD280', width='4%'))
             elif x == 0:
-                blrms_cells.append(htmllib.TableCell(' ', bgcolor='white', width='4%'))
+                blrms_cells.append(
+                    htmllib.TableCell(' ', bgcolor='white', width='4%'))
             else:
-                blrms_cells.append(htmllib.TableCell(x, bgcolor='white', width='4%'))
+                blrms_cells.append(
+                    htmllib.TableCell(x, bgcolor='white', width='4%'))
     
     # daqfailine cells to form a table row
     if info_url is not None:
-        row = [cells['chan'], cells['info'], cells['image'], cells['status'],
-               cells['disconn'], cells['daqfail'], cells['excess']] + blrms_cells
+        row = [
+            cells['chan'], cells['info'], cells['image'], cells['status'],
+            cells['disconn'], cells['daqfail'], cells['excess']
+        ] + blrms_cells
     else:
-        row = [cells['chan'], cells['status'], cells['disconn'], cells['daqfail'],
-               cells['excess']] + blrms_cells + [cells['image']]
+        row = [
+            cells['chan'], cells['status'], cells['disconn'],
+            cells['daqfail'], cells['excess']
+        ] + blrms_cells + [cells['image']]
     return row
 
 def table_to_html(table, ifo, subsystem, current_utc):
@@ -250,5 +269,6 @@ def create_empty_html(filename, results_file, channel):
     channel = channel.rstrip()
     if channel not in open(results_file).read():
         with open(filename, 'w') as status_err:
-            status_err.write('No data or not enough data to determine the status.')
+            status_err.write(
+                'No data or not enough data to determine the status.')
     return
