@@ -4,27 +4,7 @@ DISCONN_DEFAULT_NAME = 'disconn_default.txt'
 DAQFAIL_PAST_NAME = 'daqfail_past.txt'
 DISCONN_PAST_NAME = 'disconn_past.txt'
 
-# LOWER AND UPPER BOUNDS FOR BLRMS CHANGES
-BLRMS_THRESHOLDS = {
-    'GREATER_1': 1000,
-    'LESS_1': 1/500.,
-    'GREATER_2': 50,
-    'LESS_2': 1/5.
-}
-
-# INDEX RANGES FOR PSD SEGMENTS
-SEGMENT_RANGES = [
-    range(16, 52),
-    range(52, 154),
-    range(154, 512),
-    range(512, 1536),
-    range(1536, 5120),
-    range(5120, 15360),
-    range(15360, 51200),
-    range(51200, 153600),
-    range(153600, 512000),
-    range(512000, 1536000)
-]
+# FREQUENCY RANGES FOR PSD SEGMENTS
 SEGMENT_FREQS = [
     (0.03, 0.1),
     (0.1, 0.3),
