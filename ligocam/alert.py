@@ -21,11 +21,10 @@ __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
 
 SENDMAIL = '/usr/sbin/sendmail'
 # Send alert emails for these hours
-EMAIL_HOUR
 
 #================================================
 
-def find_bad_channels(file, search_for=EMAIL_HOUR):
+def find_bad_channels(file, alert_hour):
     """
     Search for channels which have been disconnected
     or have had DAQ failures in the last hour.
@@ -36,7 +35,7 @@ def find_bad_channels(file, search_for=EMAIL_HOUR):
         lines = [x.rstrip() for x in f.readlines()]
     for line in lines:
         split = line.split()
-        if int(split[1]) == int(search_for):
+        if int(split[1]) == int(alert_hour):
             bad_channels.append(split[0])
     return sorted(set(bad_channels))
 

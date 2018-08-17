@@ -184,9 +184,9 @@ lcutils.edit_calendar(calendar_file, results_url, current_time)
 
 # Send email alert if there are any bad channels
 disconn_channels = lcalert.find_bad_channels(
-    disconn_now, search_for=email_disconn)
+    disconn_now, email_disconn)
 daqfail_channels = lcalert.find_bad_channels(
-    daqfail_now, search_for=email_daqfail)
+    daqfail_now, email_daqfail)
 if len(disconn_channels) > 0 or len(daqfail_channels) > 0:
     results_url = os.path.join(
         pub_url, 'pages', year_month_str,
