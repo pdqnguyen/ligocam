@@ -25,13 +25,17 @@ import numpy as np
 import os
 import subprocess
 import sys
-from ConfigParser import ConfigParser
-from argparse import ArgumentParser
 from getpass import getuser
 from glue import pipeline
 from glue.datafind import GWDataFindHTTPConnection
 from pylal import frutils
 from gwpy.time import tconvert, from_gps, to_gps
+from argparse import ArgumentParser
+
+try:
+    from configparser import ConfigParser
+except ImportError:  # python 2.x
+    from ConfigParser import ConfigParser
 
 __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
 
@@ -72,7 +76,7 @@ channel_list = config.get('Paths', 'channel_list')
 time_now = tconvert()
 current_time = time_now - lookback_time
 current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
-reference_times = [current_time - 3600 * i for i in range(1, 13)]
+reference_times = [current_time - 3600 * (i + 1) for i in range(12)]
 reference_times_utc = [from_gps(t).strftime('%h %d %Y %H:%M:%S UTC') for t in reference_times]
 year_month_str = from_gps(current_time).strftime('%Y_%m')
 
@@ -119,7 +123,7 @@ current_cache_file = os.path.join(cache_dir, 'current.txt')
 with open(current_cache_file, 'w') as file:
     current_cache.tofile(file)
 for i, ref_cache in enumerate(reference_caches):
-    ref_cache_file = os.path.join(cache_dir, 'reference-%02d.txt' % i)
+    ref_cache_file = os.path.join(cache_dir, 'reference-%s.txt' % reference_times[i])
     with open(ref_cache_file, 'w') as file:
         ref_cache.tofile(file)
 
