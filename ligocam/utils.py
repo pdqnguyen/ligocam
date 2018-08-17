@@ -172,10 +172,11 @@ def filter_results(results_file, blrms_idx=12, status_idx=15):
             new_3.append(line)
         else:
             new_4.append(line)
-    lines = [new_1, new_2, new_3, new_4]
-    lines_sorted = [sorted(x) for x in lines]
     with open(results_file, 'w') as f:
-        f.writelines(sum(lines_sorted))
+        f.writelines(
+            sorted(new_1) + sorted(new_2) + \
+            sorted(new_3) + sorted(new_4)
+        )
 
 def edit_calendar(calendar_file, results_url, current_gps):
     """
