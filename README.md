@@ -33,5 +33,5 @@ Acceptable reference PSDs and the number of hours a channel has been
 disconnected or had a DAQ failure are all logged in the run directory.
 These records can be deleted via
 ```
-restart-channel <config_file> <channel_name>
+ligocam-reset <config_file> <channel_name>
 ```
