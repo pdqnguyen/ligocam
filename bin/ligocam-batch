@@ -55,8 +55,6 @@ CONDOR_ACCOUNTING_USER = os.getenv(
 # Argument parsing
 argparser = ArgumentParser()
 argparser.add_argument('config_file', help="LigoCAM configuration file.")
-argparser.add_argument('-u', '--universe', default=UNIVERSE, type=str,
-                       help='universe for condor processing')
 args = argparser.parse_args()
 config_file = args.config_file
 

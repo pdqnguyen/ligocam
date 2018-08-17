@@ -40,6 +40,4 @@ cp -r $share_dir/js $out_dir/status
 cp -r $share_dir/calendar/$run_name/* $out_dir/calendar
 cp -r $share_dir/calendar/css $out_dir/calendar
 cp -r $share_dir/calendar/js $out_dir/calendar
-cp -r $share_dir/daqfail_default.txt $run_dir
-cp -r $share_dir/disconn_default.txt $run_dir
 chmod -R 777 $out_dir $run_dir
