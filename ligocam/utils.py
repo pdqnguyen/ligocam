@@ -55,18 +55,17 @@ def find_frame_files(cache_dir):
             frame_cache_refs.append((ref_time, frame_cache_ref))
     return frame_cache_current, frame_cache_refs
 
-def get_data(frame_cache, channel_name, time, duration, overlap=0):
+def get_data(frame_cache, channel, time, duration, overlap=0):
     """
-    Fetch time series, and PSD for a channel from frame cache.
+    Fetch time series and PSD for a channel from frame cache.
     """
-    timeseries = frame_cache.fetch(channel_name, current_time, current_time + duration)
-    sample_rate = len(timeseries) / duration
-    psd, freq = mlab.psd(timeseries, NFFT=len(timeseries), Fs=int(sample_rate), \
-                         noverlap=int(overlap*sample_rate), detrend=mlab.detrend_none, \
-                         window=mlab.window_hanning, pad_to=None, sides='default', \
-                         scale_by_freq=1)
+    ts = frame_cache.fetch(channel, time, time + duration)
+    fs = len(ts) / duration
+    psd, freq = mlab.psd(ts, NFFT=len(ts), Fs=int(fs), noverlap=int(overlap*fs), \
+                         detrend=mlab.detrend_none, window=mlab.window_hanning, \
+                         pad_to=None, sides='default', scale_by_freq=1)
     psd = psd.reshape(freq.shape)
-    return timeseries, psd, freq
+    return ts, psd, freq
 
 def get_disconnected_yes_hour(history_file, channel):
     """
