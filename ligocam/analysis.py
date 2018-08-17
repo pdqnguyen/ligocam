@@ -119,27 +119,23 @@ def check_status(channel, psd, psd_ref, disconn_hist_file, \
     Check for disconnection or DAQ failure
     """
     
+    disconn_hour = lcutils.get_alert_hour(
+        disconn_hist_file, channel)
+    daqfail_hour = lcutils.get_alert_hour(
+        daqfail_hist_file, channel)
     disconn, daqfail = channel_status(
         channel, psd, duration,
         daqfail_thresholds, disconn_thresholds
     )
     if disconn:
-        disconnhour = lcutils.get_disconnected_yes_hour(
-            disconn_hist_file, channel
-        )
-    else:
-        disconnhour = 0
-    if daqfail:
-        daqfailhour = lcutils.get_daqfailure_yes_hour(
-            daqfail_hist_file, channel
-        )
-    else:
-        daqfailhour = 0
+        disconn_hour += 1
+    if daqfail_hour:
+        daqfail_hour += 1
     status_dict = {
         'daqfail': daqfail,
         'disconn': disconn,
-        'disconn_hour': disconnhour,
-        'daqfail_hour': daqfailhour
+        'disconn_hour': disconn_hour,
+        'daqfail_hour': daqfail_hour
     }
     return status_dict
 

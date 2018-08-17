@@ -78,51 +78,19 @@ def get_data(frame_cache, channel, time, duration, overlap=0):
     psd = psd.reshape(freq.shape)
     return ts, psd, freq
 
-def get_disconnected_yes_hour(history_file, channel):
+def get_alert_hour(history_file, channel):
     """
-    Add an hour to a channel's disconnection counter
-    """
-    
-    with open(history_file, 'r') as file:
-        lines = file.readlines()
-    hournew = 0
-    for line in lines:
-        word = line.split()
-        chan = word[0]
-        hour = word[1]
-        if chan == channel:
-            hournew = hournew + float(hour) + 1
-            break
-        else:
-            notinterested = 'ignore'
-    if hournew == 0:
-        hournew = 1
-    else:
-        hournew = hournew
-    return hournew
-
-def get_daqfailure_yes_hour(history_file, channel):
-    """
-    Add an hour to a channel's DAQ failure counter
+    Add an hour to a channel's alert counter.
     """
     
     with open(history_file, 'r') as file:
-        lines = file.readlines()
-    hournew = 0
-    for line in lines:
-        word = line.split()
-        chan = word[0]
-        hour = word[1]
-        if chan == channel:
-            hournew = hournew + float(hour) + 1
-            break
-        else:
-            notinterested = 'ignore'
-    if hournew == 0:
-        hournew = 1
+        lines = [x.rstrip() for x in file.readlines()]
+    channels, hours = zip(*[x.split() for x in lines])
+    if channel in channels:
+        idx = channels.index(channel)
+        return hours[idx]
     else:
-        hournew = hournew
-    return hournew
+        return 0
 
 def get_binned(x, bin_size):
     """
