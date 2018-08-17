@@ -27,3 +27,11 @@ Run ligocam-batch with the desired config file:
 ```
 ligocam-batch <config_file>
 ```
+
+## Resetting a channel's history
+Acceptable reference PSDs and the number of hours a channel has been
+disconnected or had a DAQ failure are all logged in the run directory.
+These records can be deleted via
+```
+restart-channel <config_file> <channel_name>
+```
