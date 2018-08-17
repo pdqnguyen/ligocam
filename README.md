@@ -9,9 +9,9 @@ More information can be found here: http://pem.ligo.org
 
 ## Installation
 
-Install ligocam directly from this repository via
+Install ligocam locally from this repository via
 ```
-python -m pip install git+https://github.com/gwdetchar/gwdetchar.git
+python -m pip install --user git+https://github.com/gwdetchar/gwdetchar.git
 ```
 
 ## Setup
