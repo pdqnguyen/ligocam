@@ -17,6 +17,7 @@
 
 from __future__ import division
 import numpy as np
+import matplotlib.mlab as mlab
 import sys
 import os
 import shutil
@@ -28,6 +29,41 @@ from . import ALPHA
 __author__ = 'Dipongkar Talukder <dipongkar.talukder@ligo.org>'
 
 #================================================================
+
+def find_frame_files(cache_dir):
+    """
+    Find frame cache files for current time and all reference times.
+    """
+    cache_files = os.listdir(cache_dir)
+    frame_cache_refs = []
+    for fname in cache_files:
+        fullname = os.path.join(cache_dir, fname)
+        current_match = re.findall('current', fname)
+        ref_match = re.findall('reference-(\d+).txt', fname)
+        if len(current_match) > 0:
+            with open(fullname, 'r') as cache:
+                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in cache.readlines()]
+            frame_cache_current = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
+        elif len(ref_match) > 0:
+            with open(fullname, 'r') as cache:
+                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in dache.readlines()]
+            frame_cache_ref = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
+            ref_time = ref_match[0]
+            frame_cache_refs.append((ref_time, frame_cache_ref))
+    return frame_cache_current, frame_cache_refs
+
+def get_data(frame_cache, channel_name, time, duration, overlap=0):
+    """
+    Fetch time series, and PSD for a channel from frame cache.
+    """
+    timeseries = frame_cache.fetch(channel_name, current_time, current_time + duration)
+    sample_rate = len(timeseries) / duration
+    psd, freq = mlab.psd(timeseries, NFFT=len(timeseries), Fs=int(sample_rate), \
+                         noverlap=int(overlap*sample_rate), detrend=mlab.detrend_none, \
+                         window=mlab.window_hanning, pad_to=None, sides='default', \
+                         scale_by_freq=1)
+    psd = psd.reshape(freq.shape)
+    return timeseries, psd, freq
 
 def get_disconnected_yes_hour(history_file, channel):
     """

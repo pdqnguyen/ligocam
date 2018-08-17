@@ -29,16 +29,15 @@ __author__ = 'Dipongkar Talukder <dipongkar.talukder@ligo.org>'
 
 #=======================================================================
 
-def compute_refpsd(channel, cache_dir, frame_type, current_time,
+def get_psd_ref(channel, cache_dir, frame_type, current_time,
                    duration, overlap, alpha=ALPHA):
     """
     Get reference PSDs for last twelve hours (one per hour), bin them,
     and combine them by exponentially averaging.
     """
     
-    ref_psds = []
-    for i in range(12):
-        cache_file = os.path.join(cache_dir, 'reference-%02d.txt' % i)
+    psd_ref_list = []
+    for frame_cache in frame_caches:
         ref_start_time = current_time - (3600 * (i + 1))
         print 'ref', i, ' time', ref_start_time
         with open(cache_file, 'r') as cache:
@@ -47,20 +46,20 @@ def compute_refpsd(channel, cache_dir, frame_type, current_time,
         get_data = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
         data = get_data.fetch(channel, ref_start_time, ref_start_time + duration)
         sample_rate = len(data) / duration
-        ref_psd, ref_freq = mlab.psd(data, NFFT=len(data), Fs=int(sample_rate),
+        psd_ref, ref_freq = mlab.psd(data, NFFT=len(data), Fs=int(sample_rate),
                                      noverlap=int(overlap*sample_rate),
                                      detrend=mlab.detrend_none,
                                      window=mlab.window_hanning, pad_to=None,
                                      sides='default', scale_by_freq=1)
-        ref_psd = ref_psd.reshape(ref_freq.shape)
-        ref_psd = get_ref_psd_binned(ref_psd, duration)
-        ref_psds.append(ref_psd)
-    ref_psd_avg = (ref_psds[0] + ref_psds[1]) / 2
-    for ref_psd in ref_psds[2:]:
-        ref_psd_avg += alpha * (ref_psd - ref_psd_avg)
-    return ref_psd_avg
+        psd_ref = psd_ref.reshape(ref_freq.shape)
+        psd_ref = get_psd_ref_binned(psd_ref, duration)
+        psd_ref_list.append(psd_ref)
+    psd_ref_avg = (psd_ref_list[0] + psd_ref_list[1]) / 2
+    for psd_ref in psd_ref_list[2:]:
+        psd_ref_avg += alpha * (psd_ref - psd_ref_avg)
+    return psd_ref_avg
 
-def get_ref_psd_binned(psd, duration, segment_freqs=SEGMENT_FREQS):
+def get_psd_ref_binned(psd, duration, segment_freqs=SEGMENT_FREQS):
     """
     Break reference PSD into segments and bin them separately.
     """
