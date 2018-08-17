@@ -49,7 +49,7 @@ def find_frame_files(cache_dir):
             frame_cache_current = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
         elif len(ref_match) > 0:
             with open(fullname, 'r') as cache:
-                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in dache.readlines()]
+                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in cache.readlines()]
             frame_cache_ref = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
             ref_time = ref_match[0]
             frame_cache_refs.append((ref_time, frame_cache_ref))
