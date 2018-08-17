@@ -3,9 +3,7 @@
 import os
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
-
-DAQFAIL_PAST_NAME = 'daqfail_past.txt'
-DISCONN_PAST_NAME = 'disconn_past.txt'
+from ligocma import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
 
 def reset_history(filename, channel):
     with open(filename, 'r') as f:

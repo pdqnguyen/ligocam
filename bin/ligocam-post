@@ -27,7 +27,12 @@ import re
 import shutil
 from gwpy.time import from_gps
 from argparse import ArgumentParser
-from ConfigParser import ConfigParser
+
+try:
+    from configparser import ConfigParser
+except ImportError:  # python 2.x
+    from ConfigParser import ConfigParser
+
 from ligocam import utils as lcutils
 from ligocam import html as lchtml
 from ligocam import alert as lcalert

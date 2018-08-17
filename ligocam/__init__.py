@@ -1,6 +1,4 @@
 # Default and past lists of DAQ failures and disconnections
-DAQFAIL_DEFAULT_NAME = 'daqfail_default.txt'
-DISCONN_DEFAULT_NAME = 'disconn_default.txt'
 DAQFAIL_PAST_NAME = 'daqfail_past.txt'
 DISCONN_PAST_NAME = 'disconn_past.txt'
 
