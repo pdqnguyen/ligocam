@@ -85,7 +85,7 @@ def get_alert_hour(history_file, channel):
     
     with open(history_file, 'r') as file:
         lines = [x.rstrip() for x in file.readlines()]
-    channels, hours = zip(*[x.split() for x in lines])
+    channels, hours = zip(*[x.split(',') for x in lines])
     if channel in channels:
         idx = channels.index(channel)
         return hours[idx]

@@ -112,17 +112,14 @@ def prep_data(freq, psd, psd_ref, duration,
     }
     return data_segs
 
-def check_status(channel, psd, psd_ref, disconn_hist_file, \
-                 daqfail_hist_file, duration, \
-                 daqfail_thresholds, disconn_thresholds):
+def check_status(channel, psd, psd_ref, disconn_file, daqfail_file, \
+                 duration, daqfail_thresholds, disconn_thresholds):
     """
     Check for disconnection or DAQ failure
     """
     
-    disconn_hour = lcutils.get_alert_hour(
-        disconn_hist_file, channel)
-    daqfail_hour = lcutils.get_alert_hour(
-        daqfail_hist_file, channel)
+    disconn_hour = lcutils.get_alert_hour(disconn_file, channel)
+    daqfail_hour = lcutils.get_alert_hour(daqfail_file, channel)
     disconn, daqfail = channel_status(
         channel, psd, duration,
         daqfail_thresholds, disconn_thresholds

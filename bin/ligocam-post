@@ -79,6 +79,22 @@ job_dir = os.path.join(run_dir, 'jobs', str(current_time))
 temp_results_dir = os.path.join(job_dir, 'results')
 results_dir = os.path.join(out_dir, 'results')
 results_archive_dir = os.path.join(results_dir, 'old', year_month_str)
+# Setup HTML directories
+page_dir = os.path.join(out_dir, 'pages', year_month_str)
+status_dir = os.path.join(out_dir, 'status')
+if not os.path.exists(page_dir):
+    os.makedirs(page_dir)
+if not os.path.exists(status_dir):
+    os.makedirs(status_dir)
+if not os.path.exists(os.path.join(page_dir, 'css')):
+    shutil.copytree(os.path.join(out_dir, 'css'),
+                    os.path.join(page_dir, 'css'))
+if not os.path.exists(os.path.join(page_dir, 'js')):
+    shutil.copytree(os.path.join(out_dir, 'js'),
+                    os.path.join(page_dir, 'js'))
+
+
+#### RESULTS HANDLING ####
 
 # Combine results files
 results_files = [
@@ -87,6 +103,7 @@ results_files = [
 ]
 results_now = os.path.join(results_dir, 'results_now.txt')
 lcutils.combine_files(results_files, results_now)
+# Parse thresholds config
 thresholds_config = ConfigParser()
 thresholds_config.read(thresholds_config_file)
 blrms_thresholds = {
@@ -94,10 +111,15 @@ blrms_thresholds = {
 weak_channels = [
     value for key, value in thresholds_config.items('Weak Magnetometers')]
 lcutils.fix_weak_magnetometers(results_now, weak_channels)
-
+# Copy new results to archive
 results_archive = os.path.join(
     results_archive_dir, 'results_%s.txt' % current_time)
 shutil.copy2(results_now, results_archive)
+# Sort data by alert status and BLRMS condition
+lcutils.filter_results(results_now)
+
+
+#### DISCONNECTION AND DAQ FAILURE HANDLING ####
 
 # Combine DAQ failure and disconnection files for archiving
 disconn_files = [
@@ -123,24 +145,9 @@ daqfail_size = daqfail_stat.st_size
 if daqfail_size > 2:
     shutil.copy2(daqfail_now, os.path.join(hist_dir, DAQFAIL_PAST_NAME))
 
-# Sort data by alert status and BLRMS condition
-lcutils.filter_results(results_now)
 
-# Setup HTML directories
-page_dir = os.path.join(out_dir, 'pages', year_month_str)
-status_dir = os.path.join(out_dir, 'status')
-if not os.path.exists(page_dir):
-    os.makedirs(page_dir)
-if not os.path.exists(status_dir):
-    os.makedirs(status_dir)
-if not os.path.exists(os.path.join(page_dir, 'css')):
-    shutil.copytree(
-        os.path.join(out_dir, 'css'), os.path.join(page_dir, 'css'))
-if not os.path.exists(os.path.join(page_dir, 'js')):
-    shutil.copytree(
-        os.path.join(out_dir, 'js'), os.path.join(page_dir, 'js'))
+#### HTML PAGES ####
 
-# HTML PAGES
 html_page = os.path.join(
     page_dir, 'LigoCamHTML_%s.html' % current_time)
 asd_path = os.path.join(
@@ -157,7 +164,6 @@ lchtml.create_single_htmls(
     status_dir, results_now, ifo, subsystem, current_time_utc,
     asd_path, ts_path, blrms_thresholds
 )
-
 # Copy to current HTML for "latest page" view
 filestat = os.stat(html_page)
 file_size = filestat.st_size
@@ -175,12 +181,18 @@ for chan in all_channels:
             status_dir, '%s_status.html' % chan.replace(':', '_'))
         lchtml.create_empty_html(status_file, results_now, chan)
 
+
+#### CALENDAR ####
+
 # Edit this month's calendar
 calendar_file = os.path.join(
     out_dir, 'calendar', 'LigoCAM_%s.html' % year_month_str)
 results_url = os.path.join(
     pub_url, 'pages', year_month_str, 'LigoCamHTML_%s.html' % current_time)
 lcutils.edit_calendar(calendar_file, results_url, current_time)
+
+
+#### EMAIL ALERT ####
 
 # Send email alert if there are any bad channels
 disconn_channels = lcalert.find_bad_channels(

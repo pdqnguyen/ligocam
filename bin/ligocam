@@ -213,10 +213,10 @@ for channel in channels:
     daqfail_new = os.path.join(results_dir, 'daqfail_' + channel_filename)
     with open(disconn_new, 'w') as disconn_file:
         disconn_file.write(
-            "%s  %.2g\n" % (channel_name, results['disconn_hour']))
+            "%s,%.2g\n" % (channel_name, results['disconn_hour']))
     with open(daqfail_new, 'w') as daqfail_file:
         daqfail_file.write(
-            "%s  %.2g\n" % (channel_name, results['daqfail_hour']))
+            "%s,%.2g\n" % (channel_name, results['daqfail_hour']))
     
     # Plot spectra and time series
     asd_segs = [np.sqrt(seg) for seg in psd_segs]
