@@ -28,7 +28,6 @@ import os
 import sys
 import time
 import traceback
-import re
 from argparse import ArgumentParser
 
 try:

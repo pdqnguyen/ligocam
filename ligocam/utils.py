@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import sys
 import os
+import re
 import shutil
 import fileinput
 from gwpy.time import from_gps
