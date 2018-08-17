@@ -24,7 +24,8 @@ ligocam-setup <config_file> <share_directory>
 ```
 
 ## Running ligocam
-Run ligocam-batch with the desired config file:
+Submit a batch of ligocam jobs to condor by running ligocam-batch with
+the desired config file:
 ```
 ligocam-batch <config_file>
 ```
