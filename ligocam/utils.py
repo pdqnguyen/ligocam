@@ -36,6 +36,7 @@ def find_frame_files(cache_dir):
     """
     Find frame cache files for current time and all reference times.
     """
+    
     cache_files = os.listdir(cache_dir)
     frame_cache_refs = []
     for fname in cache_files:
@@ -44,12 +45,20 @@ def find_frame_files(cache_dir):
         ref_match = re.findall('reference-(\d+).txt', fname)
         if len(current_match) > 0:
             with open(fullname, 'r') as cache:
-                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in cache.readlines()]
-            frame_cache_current = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
+                cache_entries = [
+                    lal.CacheEntry(x.replace('\n', '')) \
+                    for x in cache.readlines()
+                ]
+            frame_cache_current = frutils.FrameCache(
+                cache_entries, scratchdir=None, verbose=False)
         elif len(ref_match) > 0:
             with open(fullname, 'r') as cache:
-                cache_entries = [lal.CacheEntry(x.replace('\n', '')) for x in cache.readlines()]
-            frame_cache_ref = frutils.FrameCache(cache_entries, scratchdir=None, verbose=False)
+                cache_entries = [
+                    lal.CacheEntry(x.replace('\n', '')) \
+                    for x in cache.readlines()
+                ]
+            frame_cache_ref = frutils.FrameCache(
+                cache_entries, scratchdir=None, verbose=False)
             ref_time = int(ref_match[0])
             frame_cache_refs.append((ref_time, frame_cache_ref))
     return frame_cache_current, frame_cache_refs
@@ -58,11 +67,14 @@ def get_data(frame_cache, channel, time, duration, overlap=0):
     """
     Fetch time series and PSD for a channel from frame cache.
     """
+    
     ts = frame_cache.fetch(channel, time, time + duration)
     fs = len(ts) / duration
-    psd, freq = mlab.psd(ts, NFFT=len(ts), Fs=int(fs), noverlap=int(overlap*fs), \
-                         detrend=mlab.detrend_none, window=mlab.window_hanning, \
-                         pad_to=None, sides='default', scale_by_freq=1)
+    psd, freq = mlab.psd(
+        ts, NFFT=len(ts), Fs=int(fs), noverlap=int(overlap*fs),
+        detrend=mlab.detrend_none, window=mlab.window_hanning,
+        pad_to=None, sides='default', scale_by_freq=1
+    )
     psd = psd.reshape(freq.shape)
     return ts, psd, freq
 
@@ -188,8 +200,10 @@ def filter_results(results_file, blrms_idx=12, status_idx=15):
             new_3.append(line)
         else:
             new_4.append(line)
+    lines = [new_1, new_2, new_3, new_4]
+    lines_sorted = [sorted(x) for x in lines]
     with open(results_file, 'w') as f:
-        f.writelines(sorted(new_1) + sorted(new_2) + sorted(new_3) + sorted(new_4))
+        f.writelines(sum(lines_sorted))
 
 def edit_calendar(calendar_file, results_url, current_gps):
     """
@@ -204,8 +218,10 @@ def edit_calendar(calendar_file, results_url, current_gps):
     calendar_temp = '%s_%s.html' % (calendar_file.rstrip('.html'), current_gps)
     
     # String to be replaced
-    stringold = '<!-- %s --> <li class="sgrayl l1"><p>%s:00</p></li>' % (ymdh, hour)
-    stringnew = '<li class="greenish l1"><p><a href="%s">%s:00</a></p></li>' % (results_url, hour)
+    stringold = '<!-- %s --> <li class="sgrayl l1"><p>%s:00</p></li>'\
+        % (ymdh, hour)
+    stringnew = '<li class="greenish l1"><p><a href="%s">%s:00</a></p></li>'\
+        % (results_url, hour)
     shutil.copy2(calendar_file, calendar_temp)
     for j, line in enumerate(fileinput.input(calendar_temp, inplace=1)):
         sys.stdout.write(line.replace(stringold, stringnew))

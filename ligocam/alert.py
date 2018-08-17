@@ -17,6 +17,8 @@ import os
 import subprocess
 from ConfigParser import ConfigParser
 
+__author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
+
 SENDMAIL = '/usr/sbin/sendmail'
 # Send alert emails for these hours
 EMAIL_HOUR
@@ -28,6 +30,7 @@ def find_bad_channels(file, search_for=EMAIL_HOUR):
     Search for channels which have been disconnected
     or have had DAQ failures in the last hour.
     """
+    
     bad_channels = []
     with open(file, 'r') as f:
         lines = [x.rstrip() for x in f.readlines()]
@@ -43,6 +46,7 @@ def write_email(email_to, email_from, email_replyto,
     """
     Write email alert for disconnected and DAQ failure channels.
     """
+    
     if len(disconn_channels) > 0 and len(daqfail_channels) > 0:
         alertby = 'Disconnection and DAQ failure'
     elif len(disconn_channels) > 0:

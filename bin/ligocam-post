@@ -44,14 +44,18 @@ __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
 
 # Argument parsing
 argparser = ArgumentParser()
-argparser.add_argument('-c', '--config_file', help="LigoCAM configuration file.")
-argparser.add_argument('-t', '--current_time', type=int, help="Current GPS time.")
-argparser.add_argument('channel_list', help="Channel list.")
+argparser.add_argument('-c', '--config_file',
+                       help="LigoCAM configuration file.")
+argparser.add_argument('-t', '--current_time',
+                       type=int, help="Current GPS time.")
+argparser.add_argument('channel_list',
+                       help="Channel list.")
 args = argparser.parse_args()
 config_file = args.config_file
 current_time = args.current_time
 channel_list = args.channel_list
-current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
+utc_fmt = '%h %d %Y %H:%M:%S UTC'
+current_time_utc = from_gps(current_time).strftime(utc_fmt)
 year_month_str = from_gps(current_time).strftime('%Y_%m')
 
 # Config parsing
@@ -77,26 +81,35 @@ results_dir = os.path.join(out_dir, 'results')
 results_archive_dir = os.path.join(results_dir, 'old', year_month_str)
 
 # Combine results files
-results_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
-                 if re.match('result_', x)]
+results_files = [
+    os.path.join(temp_results_dir, x) for x in \
+    os.listdir(temp_results_dir) if re.match('result_', x)
+]
 results_now = os.path.join(results_dir, 'results_now.txt')
 lcutils.combine_files(results_files, results_now)
 thresholds_config = ConfigParser()
 thresholds_config.read(thresholds_config_file)
-blrms_thresholds = {key: float(value) for key, value in thresholds_config.items('BLRMS')}
-weak_channels = [value for key, value in thresholds_config.items('Weak Magnetometers')]
+blrms_thresholds = {
+    key: float(value) for key, value in thresholds_config.items('BLRMS')}
+weak_channels = [
+    value for key, value in thresholds_config.items('Weak Magnetometers')]
 lcutils.fix_weak_magnetometers(results_now, weak_channels)
 
-results_archive = os.path.join(results_archive_dir, 'results_%s.txt' % current_time)
+results_archive = os.path.join(
+    results_archive_dir, 'results_%s.txt' % current_time)
 shutil.copy2(results_now, results_archive)
 
 # Combine DAQ failure and disconnection files for archiving
-disconn_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
-                 if re.match('disconn_', x)]
+disconn_files = [
+    os.path.join(temp_results_dir, x) for x in \
+    os.listdir(temp_results_dir) if re.match('disconn_', x)
+]
 disconn_now = os.path.join(results_dir, 'disconn_now.txt')
 lcutils.combine_files(disconn_files, disconn_now)
-daqfail_files = [os.path.join(temp_results_dir, x) for x in os.listdir(temp_results_dir) \
-                 if re.match('daqfail_', x)]
+daqfail_files = [
+    os.path.join(temp_results_dir, x) for x in \
+    os.listdir(temp_results_dir) if re.match('daqfail_', x)
+]
 daqfail_now = os.path.join(results_dir, 'daqfail_now.txt')
 lcutils.combine_files(daqfail_files, daqfail_now)
 
@@ -121,18 +134,29 @@ if not os.path.exists(page_dir):
 if not os.path.exists(status_dir):
     os.makedirs(status_dir)
 if not os.path.exists(os.path.join(page_dir, 'css')):
-    shutil.copytree(os.path.join(out_dir, 'css'), os.path.join(page_dir, 'css'))
+    shutil.copytree(
+        os.path.join(out_dir, 'css'), os.path.join(page_dir, 'css'))
 if not os.path.exists(os.path.join(page_dir, 'js')):
-    shutil.copytree(os.path.join(out_dir, 'js'), os.path.join(page_dir, 'js'))
+    shutil.copytree(
+        os.path.join(out_dir, 'js'), os.path.join(page_dir, 'js'))
 
 # HTML PAGES
-html_page = os.path.join(page_dir, 'LigoCamHTML_%s.html' % current_time)
-asd_path = os.path.join(pub_url, 'images', 'ASD', year_month_str, str(current_time))
-ts_path = os.path.join(pub_url, 'images', 'TS', year_month_str, str(current_time))
+html_page = os.path.join(
+    page_dir, 'LigoCamHTML_%s.html' % current_time)
+asd_path = os.path.join(
+    pub_url, 'images', 'ASD', year_month_str, str(current_time))
+ts_path = os.path.join(
+    pub_url, 'images', 'TS', year_month_str, str(current_time))
 # Create HTML page
-lchtml.create_html(html_page, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path, blrms_thresholds)
+lchtml.create_html(
+    html_page, results_now, ifo, subsystem, current_time_utc,
+    asd_path, ts_path, blrms_thresholds
+)
 # Create single HTMLs
-lchtml.create_single_htmls(status_dir, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path, blrms_thresholds)
+lchtml.create_single_htmls(
+    status_dir, results_now, ifo, subsystem, current_time_utc,
+    asd_path, ts_path, blrms_thresholds
+)
 
 # Copy to current HTML for "latest page" view
 filestat = os.stat(html_page)
@@ -147,21 +171,31 @@ with open(results_now, 'r') as f:
     results_channels = [line.split(',')[0] for line in f.readlines()]
 for chan in all_channels:
     if chan not in results_channels:
-        status_file = os.path.join(status_dir, '%s_status.html' % chan.replace(':', '_'))
+        status_file = os.path.join(
+            status_dir, '%s_status.html' % chan.replace(':', '_'))
         lchtml.create_empty_html(status_file, results_now, chan)
 
 # Edit this month's calendar
-calendar_file = os.path.join(out_dir, 'calendar', 'LigoCAM_%s.html' % year_month_str)
-results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_%s.html' % current_time)
+calendar_file = os.path.join(
+    out_dir, 'calendar', 'LigoCAM_%s.html' % year_month_str)
+results_url = os.path.join(
+    pub_url, 'pages', year_month_str, 'LigoCamHTML_%s.html' % current_time)
 lcutils.edit_calendar(calendar_file, results_url, current_time)
 
 # Send email alert if there are any bad channels
-disconn_channels = lcalert.find_bad_channels(disconn_now, search_for=email_disconn)
-daqfail_channels = lcalert.find_bad_channels(daqfail_now, search_for=email_daqfail)
+disconn_channels = lcalert.find_bad_channels(
+    disconn_now, search_for=email_disconn)
+daqfail_channels = lcalert.find_bad_channels(
+    daqfail_now, search_for=email_daqfail)
 if len(disconn_channels) > 0 or len(daqfail_channels) > 0:
-    results_url = os.path.join(pub_url, 'pages', year_month_str, 'LigoCamHTML_' + str(current_time) + '.html')
-    message = lcalert.write_email(email_to, email_replyto, disconn_channels, daqfail_channels,
-                                  ifo, subsystem, results_url, current_time_utc)
+    results_url = os.path.join(
+        pub_url, 'pages', year_month_str,
+        'LigoCamHTML_' + str(current_time) + '.html'
+    )
+    message = lcalert.write_email(
+        email_to, email_replyto, disconn_channels, daqfail_channels, ifo,
+        subsystem, results_url, current_time_utc
+    )
     message_file = os.path.join(job_dir, 'email.txt')
     with open(message_file, 'w') as f:
         f.write(message)

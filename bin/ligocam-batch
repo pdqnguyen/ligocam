@@ -77,7 +77,8 @@ time_now = tconvert()
 current_time = time_now - lookback_time
 current_time_utc = from_gps(current_time).strftime('%h %d %Y %H:%M:%S UTC')
 reference_times = [current_time - 3600 * (i + 1) for i in range(12)]
-reference_times_utc = [from_gps(t).strftime('%h %d %Y %H:%M:%S UTC') for t in reference_times]
+reference_times_utc = [
+    from_gps(t).strftime('%h %d %Y %H:%M:%S UTC') for t in reference_times]
 year_month_str = from_gps(current_time).strftime('%Y_%m')
 
 # History directory
@@ -93,13 +94,16 @@ chan_dir = os.path.join(job_dir, 'channels')
 temp_results_dir = os.path.join(job_dir, 'results')
 results_dir = os.path.join(out_dir, 'results')
 old_results_dir = os.path.join(results_dir, 'old', year_month_str)
-asd_dir = os.path.join(out_dir, 'images', 'ASD', year_month_str, str(current_time))
-ts_dir = os.path.join(out_dir, 'images', 'TS', year_month_str, str(current_time))
+asd_dir = os.path.join(
+    out_dir, 'images', 'ASD', year_month_str, str(current_time))
+ts_dir = os.path.join(
+    out_dir, 'images', 'TS', year_month_str, str(current_time))
 pages_dir = os.path.join(out_dir, 'pages', year_month_str)
 
 # Create directories
-all_dirs = [hist_dir, job_dir, log_dir, sub_dir, cache_dir, chan_dir, temp_results_dir,
-            results_dir, old_results_dir, asd_dir, ts_dir, pages_dir]
+all_dirs = [
+    hist_dir, job_dir, log_dir, sub_dir, cache_dir, chan_dir, temp_results_dir,
+    results_dir, old_results_dir, asd_dir, ts_dir, pages_dir]
 for d in all_dirs:
     if not os.path.exists(d):
         os.makedirs(d)
@@ -110,11 +114,15 @@ if ifo == 'LHO':
     observatory = 'H'
 elif ifo == 'LLO':
     observatory = 'L'
-current_cache = conn.find_frame_urls(observatory, frame_type, current_time, current_time + duration, urltype='file')
+current_cache = conn.find_frame_urls(
+    observatory, frame_type, current_time,
+    current_time + duration, urltype='file')
 reference_caches = []
 for ref_time in reference_times:
     reference_caches.append(
-        conn.find_frame_urls(observatory, frame_type, ref_time, ref_time + duration, urltype='file')
+        conn.find_frame_urls(
+            observatory, frame_type, ref_time,
+            ref_time + duration, urltype='file')
     )
 conn.close()
 
@@ -123,7 +131,8 @@ current_cache_file = os.path.join(cache_dir, 'current.txt')
 with open(current_cache_file, 'w') as file:
     current_cache.tofile(file)
 for i, ref_cache in enumerate(reference_caches):
-    ref_cache_file = os.path.join(cache_dir, 'reference-%s.txt' % reference_times[i])
+    ref_cache_file = os.path.join(
+        cache_dir, 'reference-%s.txt' % reference_times[i])
     with open(ref_cache_file, 'w') as file:
         ref_cache.tofile(file)
 
@@ -134,7 +143,8 @@ channels = [c.replace('\n', '') for c in channels]
 channel_list_split = []
 for i in range(0, len(channels), channels_per_job):
     split = channels[i : i + channels_per_job]
-    filename = os.path.join(chan_dir, 'channels-%02d.txt' % (i/channels_per_job))
+    filename = os.path.join(
+        chan_dir, 'channels-%02d.txt' % (i/channels_per_job))
     with open(filename, 'w') as file:
         file.write('\n'.join(split))
     channel_list_split.append(filename)
@@ -202,17 +212,4 @@ dag.add_node(post_node)
 # Write condor and DAG files and submit the DAG to condor
 dag.write_sub_files()
 dag.write_dag()
-
-# Set parents and child
-# with open(dagfile, 'r') as f:
-#     dag_lines = f.readlines()
-# job_lines = [line for line in dag_lines if sub_filename in line]
-# job_ids = [line.split(' ')[1] for line in job_lines]
-# post_job_line = [line for line in dag_lines if post_sub_filename in line][0]
-# post_job_id = post_job_line.split(' ')[1]
-# new_line = 'PARENT ' + ' '.join(job_ids) + ' CHILD ' + post_job_id + '\n'
-# dag_lines.append(new_line)
-# with open(dagfile, 'w') as f:
-#     f.writelines(dag_lines)
-
 subprocess.call('condor_submit_dag ' + dagfile, shell=True)
