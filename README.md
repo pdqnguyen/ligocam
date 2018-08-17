@@ -1,4 +1,4 @@
-Welcome to LIGO Channel Activity Monitor (ligocam).
+# LIGO Channel Activity Monitor (ligocam).
 
 ligocam is an efficient diagnostic tool for monitoring auxiliary channels.
 The utilities include locating a malfunctioning channel, graphic information
