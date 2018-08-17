@@ -40,7 +40,7 @@ from ligocam import utils as lcutils
 from ligocam import refutils as lcrefutils
 from ligocam import analysis as lcanalysis
 from ligocam import plot as lcplot
-from ligocam import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
+from ligocam import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME, ALPHA)
 from gwpy.time import from_gps, tconvert
 
 __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
@@ -129,7 +129,7 @@ for channel in channels:
                 psd_ref_all_hours.append(psd_ref_hour)
             psd_ref = (psd_ref_all_hours[0] + psd_ref_all_hours[1]) / 2
             for p in psd_ref_all_hours[2:]:
-                psd_ref += alpha * (p - psd_ref)
+                psd_ref += ALPHA * (p - psd_ref)
         except:
             print traceback.print_exc()
             continue
