@@ -20,7 +20,7 @@ import os
 import shutil
 from gwpy.time import from_gps
 
-from . import (htmllib, BLRMS_THRESHOLDS)
+from . import htmllib
 
 __author__ = 'Dipongkar Talukder <dipongkar.talukder@ligo.org>'
 
@@ -31,8 +31,7 @@ PEM_MAP_URL = "http://pem.ligo.org/channelinfo/index.php"
 #========================================================
 
 def create_html(filename, results_file, ifo, subsystem, current_utc,
-                asd_path, ts_path, pem_map_url=PEM_MAP_URL,
-                blrms_thresholds=BLRMS_THRESHOLDS):
+                asd_path, ts_path, blrms_thresholds, pem_map_url=PEM_MAP_URL):
     """
     Create HTML results page for a full LigoCAM run.
     """
@@ -72,8 +71,7 @@ def create_html(filename, results_file, ifo, subsystem, current_utc,
         info_url = "%s?channelname=%s" % (pem_map_url, chan_url)
         asd_url = os.path.join(asd_path, chan_file)
         ts_url = os.path.join(ts_path, chan_file)
-        row = create_html_row(results, asd_url, ts_url,
-                              blrms_thresholds=blrms_thresholds, info_url=info_url)
+        row = create_html_row(results, asd_url, ts_url, blrms_thresholds, info_url=info_url)
         table.rows.append(row)
     
     # Write HTML page to file
@@ -83,7 +81,7 @@ def create_html(filename, results_file, ifo, subsystem, current_utc,
     return
 
 def create_single_htmls(save_dir, results_file, ifo, subsystem,
-                        current_utc, asd_path, ts_path):
+                        current_utc, asd_path, ts_path, blrms_thresholds):
     """
     Creat HTML result page for a single channel's LigoCAM status.
     """
@@ -97,7 +95,7 @@ def create_single_htmls(save_dir, results_file, ifo, subsystem,
         chan_file = chan.replace(':', '_')
         asd_url = os.path.join(asd_path, chan_file + '.png')
         ts_url = os.path.join(ts_path, chan_file + '.png')
-        row = create_html_row(results, asd_url, ts_url)
+        row = create_html_row(results, asd_url, ts_url, blrms_thresholds)
         table = htmllib.Table(
             header_row=[
                 htmllib.TableCell('Channel name', width='31%', header=True),
@@ -126,8 +124,7 @@ def create_single_htmls(save_dir, results_file, ifo, subsystem,
             f.write(html)
     return
 
-def create_html_row(results, asd_url, ts_url, info_url=None,
-                    blrms_thresholds=BLRMS_THRESHOLDS):
+def create_html_row(results, asd_url, ts_url, blrms_thresholds, info_url=None):
     """
     Create an HTML table row from a list of results for a single channel.
     """
@@ -141,10 +138,10 @@ def create_html_row(results, asd_url, ts_url, info_url=None,
     disconn_hour = results[16]
     daqfail_hour = results[17]
     
-    thd1g = blrms_thresholds['GREATER_1']
-    thd1l = blrms_thresholds['LESS_1']
-    thd2g = blrms_thresholds['GREATER_2']
-    thd2l = blrms_thresholds['LESS_2']
+    thd1g = blrms_thresholds['greater_1']
+    thd1l = blrms_thresholds['less_1']
+    thd2g = blrms_thresholds['greater_2']
+    thd2l = blrms_thresholds['less_2']
     
     cells = {}
     

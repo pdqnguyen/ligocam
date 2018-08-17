@@ -84,6 +84,7 @@ results_now = os.path.join(results_dir, 'results_now.txt')
 lcutils.combine_files(results_files, results_now)
 thresholds_config = ConfigParser()
 thresholds_config.read(thresholds_config_file)
+blrms_thresholds = {key: float(value) for key, value in thresholds_config.items('BLRMS')}
 weak_channels = [value for key, value in thresholds_config.items('Weak Magnetometers')]
 lcutils.fix_weak_magnetometers(results_now, weak_channels)
 
@@ -130,9 +131,9 @@ html_page = os.path.join(page_dir, 'LigoCamHTML_%s.html' % current_time)
 asd_path = os.path.join(pub_url, 'images', 'ASD', year_month_str, str(current_time))
 ts_path = os.path.join(pub_url, 'images', 'TS', year_month_str, str(current_time))
 # Create HTML page
-lchtml.create_html(html_page, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path)
+lchtml.create_html(html_page, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path, blrms_thresholds)
 # Create single HTMLs
-lchtml.create_single_htmls(status_dir, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path)
+lchtml.create_single_htmls(status_dir, results_now, ifo, subsystem, current_time_utc, asd_path, ts_path, blrms_thresholds)
 
 # Copy to current HTML for "latest page" view
 filestat = os.stat(html_page)
