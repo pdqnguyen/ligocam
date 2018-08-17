@@ -24,6 +24,8 @@ import re
 import shutil
 import fileinput
 from gwpy.time import from_gps
+from glue import lal
+from pylal import frutils
 from . import plot as lcplot
 from . import ALPHA
 

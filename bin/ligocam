@@ -28,6 +28,7 @@ import os
 import sys
 import time
 import traceback
+import shutil
 from argparse import ArgumentParser
 
 try:
@@ -40,9 +41,6 @@ from ligocam import refutils as lcrefutils
 from ligocam import analysis as lcanalysis
 from ligocam import plot as lcplot
 from ligocam import (DAQFAIL_PAST_NAME, DISCONN_PAST_NAME)
-import shutil
-from glue import lal
-from pylal import frutils
 from gwpy.time import from_gps, tconvert
 
 __author__ = 'Philippe Nguyen <philippe.nguyen@ligo.org>'
